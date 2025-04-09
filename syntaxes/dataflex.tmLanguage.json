@@ -1,0 +1,39 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Dataflex",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#comments"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.dataflex",
+				"match": "\\b(if|else|while|for|procedure|function|end)\\b"
+			}]
+		},
+		"strings": {
+			"name": "string.quoted.double.dataflex",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.dataflex",
+					"match": "\\\\."
+				}
+			]
+		},
+		"comments": {
+			"name": "comment.line.double-slash.dataflex",
+			"match": "//.*$"
+		}
+	},
+	"scopeName": "source.dataflex"
+}

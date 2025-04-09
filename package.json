@@ -1,0 +1,25 @@
+{
+  "name": "dataflex",
+  "displayName": "dataflex",
+  "description": "Dataflex Vs Code Language Support",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.99.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "dataflex",
+      "aliases": ["Dataflex", "dataflex"],
+      "extensions": ["*.src;*.vw;*.sl;*.dg;*.rv;*.bp;*.pkg;*.wo;*.dd;*.inc;*.tpl;*.dfo"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "dataflex",
+      "scopeName": "source.dataflex",
+      "path": "./syntaxes/dataflex.tmLanguage.json"
+    }]
+  }
+}
