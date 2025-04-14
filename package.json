@@ -9,17 +9,74 @@
   "categories": [
     "Programming Languages"
   ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onLanguage:dataflex"    
+  ],
   "contributes": {
-    "languages": [{
-      "id": "dataflex",
-      "aliases": ["Dataflex", "dataflex"],
-      "extensions": ["*.src;*.vw;*.sl;*.dg;*.rv;*.bp;*.pkg;*.wo;*.dd;*.inc;*.tpl;*.dfo"],
-      "configuration": "./language-configuration.json"
-    }],
-    "grammars": [{
-      "language": "dataflex",
-      "scopeName": "source.dataflex",
-      "path": "./syntaxes/dataflex.tmLanguage.json"
-    }]
+    "languages": [
+      {
+        "id": "dataflex",
+        "aliases": [
+          "Dataflex",
+          "dataflex"
+        ],
+        "extensions": [
+          ".src, .vw, .sl, .dg, .rv, .bp, .pkg, .wo, .dd, .inc, .tpl, .dfo"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "dataflex",
+        "scopeName": "source.dataflex",
+        "path": "./syntaxes/dataflex.tmLanguage.json"
+      }
+    ],
+    "tokenColors": [
+      {
+        "scope": "keyword.operator.relational.dataflex",
+        "settings": {
+          "foreground": "#FF0000"
+        }
+      },
+      {
+        "scope": "keyword.operator.arithmetic.dataflex",
+        "settings": {
+          "foreground": "#FF0000"
+        }
+      },
+      {
+        "scope": "keyword.operator.boolean.dataflex",
+        "settings": {
+          "foreground": "#FF0000"
+        }
+      },
+      {
+        "scope": "keyword.operator.unary.dataflex",
+        "settings": {
+          "foreground": "#FF0000"
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command": "dataflex.compile",
+        "title": "Compile Dataflex Program"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/accordsystems/dataflex-vscode.git"
+  },
+  "dependencies": {
+    "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@types/vscode": "^1.99.1",
+    "vscode": "^1.1.37"
   }
 }

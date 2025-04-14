@@ -10,14 +10,80 @@
 		},
 		{
 			"include": "#comments"
+		},
+		{
+			"include": "#operators"
 		}
+
 	],
 	"repository": {
 		"keywords": {
-			"patterns": [{
-				"name": "keyword.control.dataflex",
-				"match": "\\b(if|else|while|for|procedure|function|end)\\b"
-			}]
+			"patterns": [
+				{
+                    "match": "\\b(Procedure|End_Procedure|Function|End_Function|Function_Return|Begin|End)\\b",
+                    "name": "keyword.control.dataflex"
+                },      
+				{	
+					"match": "\\b(String|Number|Integer|Date|DateTime|Property|Global_Variable|Local_Variable|Define|Object|End_Object|Class|Struct|End_Struct)\\b",
+					"name": "keyword.declaration.dataflex"
+				},          
+				{
+					"match": "\\b(For|Loop|While|Until|Repeat)\\b",
+					"name": "keyword.control.loop.dataflex"
+				},
+				{
+					"match": "\\b(Begin|End|If|Else|Else If|Case|Case Break)\\b",
+					"name": "keyword.control.conditional.dataflex"
+				},				
+				{
+					"match": "\\b(End|Case End)\\b",
+					"name": "keyword.control.end.dataflex"
+				},
+				{
+					"match": "\\b(Move|Get|Set|Send)\\b",
+					"name": "keyword.access.dataflex"
+				},
+				{
+					"match": "\\bto\\b",
+					"name": "keyword.access.dataflex"
+				},
+				{
+					"match": "\\bfrom\\b",
+					"name": "keyword.access.dataflex"
+				}		
+			]	
+		},
+		"operators": {
+			"patterns": [
+				{
+					"match": "\\+|\\-|\\*|\\/|\\^",
+					"name": "keyword.operator.arithmetic.dataflex"
+				},
+				{
+					"match": "\\b(Max|Min)\\b",
+					"name": "keyword.operator.function.dataflex"
+				},
+				{
+					"match": "\\b(Not)\\b",
+					"name": "keyword.operator.unary.dataflex"
+				},
+				{
+					"match": "(?<!\\w)(=|<>|<|>|<=|>=)(?!\\w)",
+					"name": "keyword.operator.relational.dataflex"
+				},
+				{
+					"match": "\\b(Contains|Matches)\\b",
+					"name": "keyword.operator.relational.dataflex"
+				},
+				{
+					"match": "\\b(And|Or)\\b",
+					"name": "keyword.operator.boolean.dataflex"
+				},
+				{
+					"match": "\\b(Iand|Ior)\\b",
+					"name": "keyword.operator.bitwise.dataflex"
+				}
+			]
 		},
 		"strings": {
 			"name": "string.quoted.double.dataflex",
@@ -31,9 +97,18 @@
 			]
 		},
 		"comments": {
-			"name": "comment.line.double-slash.dataflex",
-			"match": "//.*$"
-		}
+			"patterns": [
+				{
+					"name": "comment.block.dataflex",
+					"begin": "/\\*",
+					"end": "\\*/"
+				},
+				{
+					"name": "comment.line.double-slash.dataflex",
+					"match": "//.*$"
+				}				
+			]			
+		}		
 	},
 	"scopeName": "source.dataflex"
 }
