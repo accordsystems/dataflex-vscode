@@ -22,7 +22,7 @@
           "dataflex"
         ],
         "extensions": [
-          ".src, .vw, .sl, .dg, .rv, .bp, .pkg, .wo, .dd, .inc, .tpl, .dfo"
+          ".src, .vw, .sl, .dg, .rv, .bp, .pkg, .wo, .dd, .inc, .tpl, .dfo, .pkg" 
         ],
         "configuration": "./language-configuration.json"
       }
