@@ -76,6 +76,17 @@ function activate(context) {
     });
     const symbolProvider = vscode.languages.registerDocumentSymbolProvider({ language: 'dataflex' }, new DataFlexDocumentSymbolProvider());
     context.subscriptions.push(definitionProvider);
+    const config = vscode.workspace.getConfiguration();
+    // Check if the encoding for `.src` files is already set
+    const encoding = config.get('files.encoding');
+    const associations = config.get('files.associations');
+    if (encoding !== 'cp437' || !associations || associations['*.src'] !== 'dataflex') {
+        vscode.window.showInformationMessage('It is recommended to set the encoding for `.src` files to cp437 and associate them with the Dataflex language. Add the following to your settings.json:\n\n' +
+            `"files.encoding": "cp437",\n` +
+            `"files.associations": {\n` +
+            `  "*.src": "dataflex"\n` +
+            `}`);
+    }
 }
 class DataFlexDocumentSymbolProvider {
     provideDocumentSymbols(document, token) {
@@ -139,6 +150,7 @@ function findDefinition(word, document, position) {
     });
 }
 //Determines if a line is within a scope of a Function or Procedure
+//Needs Testing
 function isWithinFunctionProcedureScope(position, lines, currentLine) {
     let inFunction = false;
     let functionStartLine = -1;
@@ -167,6 +179,7 @@ function isWithinFunctionProcedureScope(position, lines, currentLine) {
     }
     return { inScope: inFunction, functionStartLine, functionEndLine };
 }
+//Need to Test
 function extractVariablesAndParameters(lines, functionStartLine, functionEndLine) {
     const variables = [];
     for (let i = functionStartLine; i <= functionEndLine; i++) {

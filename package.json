@@ -10,9 +10,7 @@
     "Programming Languages"
   ],
   "main": "./out/extension.js",
-  "activationEvents": [
-    "onLanguage:dataflex"    
-  ],
+  "activationEvents": [],
   "contributes": {
     "languages": [
       {
@@ -22,7 +20,18 @@
           "dataflex"
         ],
         "extensions": [
-          ".src, .vw, .sl, .dg, .rv, .bp, .pkg, .wo, .dd, .inc, .tpl, .dfo, .pkg" 
+          ".src",
+          ".vw",
+          ".sl",
+          ".dg",
+          ".rv",
+          ".bp",
+          ".pkg",
+          ".wo",
+          ".dd",
+          ".inc",
+          ".tpl",
+          ".dfo"
         ],
         "configuration": "./language-configuration.json"
       }

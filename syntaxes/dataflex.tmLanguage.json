@@ -85,30 +85,40 @@
 				}
 			]
 		},
-		"strings": {
-			"name": "string.quoted.double.dataflex",
-			"begin": "\"",
-			"end": "\"",
-			"patterns": [
-				{
-					"name": "constant.character.escape.dataflex",
-					"match": "\\\\."
-				}
-			]
+		"strings": {			
 		},
 		"comments": {
 			"patterns": [
-				{
-					"name": "comment.block.dataflex",
-					"begin": "/\\*",
-					"end": "\\*/"
-				},
 				{
 					"name": "comment.line.double-slash.dataflex",
 					"match": "//.*$"
 				}				
 			]			
-		}		
+		},	
+		"screen": {
+            "patterns": [
+                {
+                    "name": "entity.name.section.screen.dataflex",
+                    "match": "^/screenINFO\\s+\\w+"
+                },
+                {
+                    "name": "entity.name.border.screen.dataflex",
+                    "match": "^[\u250C\u2500\u2510\u2502\u2514\u2518]+$"
+                },
+                {
+                    "name": "entity.name.text.screen.dataflex",
+                    "match": "^[\u2502].*[\u2502]$"
+                },
+                {
+                    "name": "entity.name.placeholder.screen.dataflex",
+                    "match": "_"
+                },
+                {
+                    "name": "entity.name.option.screen.dataflex",
+                    "match": "^\\s*\\d+\\.\\s+.*\\?$"
+                }
+            ]
+        }
 	},
 	"scopeName": "source.dataflex"
 }

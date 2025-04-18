@@ -42,6 +42,20 @@ function activate(context: vscode.ExtensionContext) {
     );    
 
     context.subscriptions.push(definitionProvider);
+    const config = vscode.workspace.getConfiguration();
+    // Check if the encoding for `.src` files is already set
+    const encoding = config.get<string>('files.encoding');
+    const associations = config.get<{ [key: string]: string }>('files.associations');
+
+    if (encoding !== 'cp437' || !associations || associations['*.src'] !== 'dataflex') {
+        vscode.window.showInformationMessage(
+            'It is recommended to set the encoding for `.src` files to cp437 and associate them with the Dataflex language. Add the following to your settings.json:\n\n' +
+            `"files.encoding": "cp437",\n` +
+            `"files.associations": {\n` +
+            `  "*.src": "dataflex"\n` +
+            `}`
+        );
+    }
 }
 
 class DataFlexDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
