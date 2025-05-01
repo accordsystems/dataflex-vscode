@@ -88,10 +88,16 @@ function activate(context) {
             `}`);
     }
 }
+// This class provides the DocumentSymbolProvider for DataFlex files (The Outline view)
+// It will provide symbols for classes, functions, procedures, commands, and labels
+// It will also provide a symbol for the start and end of the file
 class DataFlexDocumentSymbolProvider {
     provideDocumentSymbols(document, token) {
         const symbols = [];
         const lines = document.getText().split('\n');
+        const classStack = []; // Stack to track nested classes
+        const objectStack = []; // Stack to track nested objects
+        const structStack = []; // Stack to track nested screens
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
             // Match Classes
@@ -99,20 +105,81 @@ class DataFlexDocumentSymbolProvider {
             if (classMatch) {
                 const className = classMatch[1];
                 const classSymbol = new vscode.DocumentSymbol(className, 'Class', vscode.SymbolKind.Class, new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)), new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)));
-                symbols.push(classSymbol);
+                if (classStack.length > 0) {
+                    // Add this class as a child of the current class on the stack
+                    classStack[classStack.length - 1].children.push(classSymbol);
+                }
+                else {
+                    // Add this class to the top-level symbols
+                    symbols.push(classSymbol);
+                }
+                classStack.push(classSymbol); // Push the current class onto the stack
+                continue;
+            }
+            // Match End_Class
+            const endClassMatch = line.match(/^End_Class/);
+            if (endClassMatch) {
+                if (classStack.length > 0) {
+                    // Pop the current class from the stack
+                    const completedClass = classStack.pop();
+                    if (completedClass) {
+                        // Update the range to include the end of the class
+                        completedClass.range = new vscode.Range(completedClass.range.start, new vscode.Position(i, line.length));
+                    }
+                }
+                continue;
+            }
+            // Match Objects
+            const objectMatch = line.match(/^Object\s+(\w+)\s+is\s+a[n]?\s+(\w+)/);
+            if (objectMatch) {
+                const objectName = objectMatch[1];
+                const className = objectMatch[2];
+                const objectSymbol = new vscode.DocumentSymbol(objectName, `Object of type ${className}`, vscode.SymbolKind.Object, new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)), new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)));
+                if (objectStack.length > 0) {
+                    // Add this object as a child of the current object on the stack
+                    objectStack[objectStack.length - 1].children.push(objectSymbol);
+                }
+                else if (classStack.length > 0) {
+                    // Add this object as a child of the current class
+                    classStack[classStack.length - 1].children.push(objectSymbol);
+                }
+                else {
+                    // Add this object to the top-level symbols
+                    symbols.push(objectSymbol);
+                }
+                objectStack.push(objectSymbol); // Push the current object onto the stack
+                continue;
+            }
+            // Match End_Object
+            const endObjectMatch = line.match(/^End_Object/);
+            if (endObjectMatch) {
+                if (objectStack.length > 0) {
+                    // Pop the current object from the stack
+                    const completedObject = objectStack.pop();
+                    if (completedObject) {
+                        // Update the range to include the end of the object
+                        completedObject.range = new vscode.Range(completedObject.range.start, new vscode.Position(i, line.length));
+                    }
+                }
                 continue;
             }
             // Match Functions
-            // Functions Take the Form of Function <functionName> <variables> returns <type> and 
-            // They may also have the Byref keyword for parameters
-            // Example: Function MyFunction String returns String
-            // Example 2: Function MyFunction String Byref string returns String
-            // End_Function closes the Function
             const functionMatch = line.match(/^Function\s+(\w+)/);
             if (functionMatch) {
                 const functionName = functionMatch[1];
                 const functionSymbol = new vscode.DocumentSymbol(functionName, 'Function', vscode.SymbolKind.Function, new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)), new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)));
-                symbols.push(functionSymbol);
+                if (objectStack.length > 0) {
+                    // Add this function as a child of the current object
+                    objectStack[objectStack.length - 1].children.push(functionSymbol);
+                }
+                else if (classStack.length > 0) {
+                    // Add this function as a child of the current class
+                    classStack[classStack.length - 1].children.push(functionSymbol);
+                }
+                else {
+                    // Add this function to the top-level symbols
+                    symbols.push(functionSymbol);
+                }
                 continue;
             }
             // Match Procedures
@@ -120,7 +187,18 @@ class DataFlexDocumentSymbolProvider {
             if (procedureMatch) {
                 const procedureName = procedureMatch[1];
                 const procedureSymbol = new vscode.DocumentSymbol(procedureName, 'Procedure', vscode.SymbolKind.Method, new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)), new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)));
-                symbols.push(procedureSymbol);
+                if (objectStack.length > 0) {
+                    // Add this procedure as a child of the current object
+                    objectStack[objectStack.length - 1].children.push(procedureSymbol);
+                }
+                else if (classStack.length > 0) {
+                    // Add this procedure as a child of the current class
+                    classStack[classStack.length - 1].children.push(procedureSymbol);
+                }
+                else {
+                    // Add this procedure to the top-level symbols
+                    symbols.push(procedureSymbol);
+                }
                 continue;
             }
             // Match Commands
@@ -140,6 +218,46 @@ class DataFlexDocumentSymbolProvider {
                 const labelName = labelMatch[1];
                 const labelSymbol = new vscode.DocumentSymbol(labelName, 'Label', vscode.SymbolKind.String, new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)), new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)));
                 symbols.push(labelSymbol);
+                continue;
+            }
+            //Match Structs
+            // Structs take the form of Struct <structName> and End_Struct
+            // Example: Struct MyStruct
+            // End_Struct closes the Struct
+            const structMatch = line.match(/^Struct\s+(\w+)/);
+            if (structMatch) {
+                const structName = structMatch[1];
+                const structSymbol = new vscode.DocumentSymbol(structName, 'Struct', vscode.SymbolKind.Struct, new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)), new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)));
+                symbols.push(structSymbol);
+                continue;
+            }
+            // Match Screens
+            const screenMatch = line.match(/^\/screen(\w+)/);
+            if (screenMatch) {
+                const screenName = screenMatch[1];
+                const screenSymbol = new vscode.DocumentSymbol(screenName, 'Screen', vscode.SymbolKind.Struct, new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)), new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)));
+                if (structStack.length > 0) {
+                    // Add this screen as a child of the current screen on the stack
+                    structStack[structStack.length - 1].children.push(screenSymbol);
+                }
+                else {
+                    // Add this screen to the top-level symbols
+                    symbols.push(screenSymbol);
+                }
+                structStack.push(screenSymbol); // Push the current screen onto the stack
+                continue;
+            }
+            // Match End of Screens
+            const endScreenMatch = line.match(/^\/\*/);
+            if (endScreenMatch) {
+                if (structStack.length > 0) {
+                    // Pop the current screen from the stack
+                    const completedScreen = structStack.pop();
+                    if (completedScreen) {
+                        // Update the range to include the end of the screen
+                        completedScreen.range = new vscode.Range(completedScreen.range.start, new vscode.Position(i, line.length));
+                    }
+                }
                 continue;
             }
         }
