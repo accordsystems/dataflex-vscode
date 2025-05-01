@@ -74,6 +74,11 @@
         "command": "dataflex.compile",
         "title": "Compile Dataflex Program"
       }
+    ],
+    "documentSymbol": [
+      {
+        "language": "dataflex"
+      }
     ]
   },
   "repository": {

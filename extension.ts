@@ -58,6 +58,9 @@ function activate(context: vscode.ExtensionContext) {
     }
 }
 
+// This class provides the DocumentSymbolProvider for DataFlex files (The Outline view)
+// It will provide symbols for classes, functions, procedures, commands, and labels
+// It will also provide a symbol for the start and end of the file
 class DataFlexDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
     public provideDocumentSymbols(
         document: vscode.TextDocument,
@@ -86,7 +89,13 @@ class DataFlexDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
             }
 
             // Match Functions
-            const functionMatch = line.match(/^Function\s+(\w+)/);
+            // Functions Take the Form of Function <functionName> <variables> returns <type> and 
+            // They may also have the Byref keyword for parameters
+            // Example: Function MyFunction String returns String
+            // Example 2: Function MyFunction String Byref string returns String
+            // End_Function closes the Function
+            
+            const functionMatch = line.match(/^Function\s+(\w+)/);            
             if (functionMatch) {
                 const functionName = functionMatch[1];
                 const functionSymbol = new vscode.DocumentSymbol(
@@ -114,6 +123,38 @@ class DataFlexDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
                 symbols.push(procedureSymbol);
                 continue;
             }
+            // Match Commands
+            // Commands Take the Form of #COMMAND <commandName> and #END_COMMAND
+            const commandMatch = line.match(/^#COMMAND\s+(\w+)/);
+            if (commandMatch) {
+                const commandName = commandMatch[1];
+                const commandSymbol = new vscode.DocumentSymbol(
+                    commandName,
+                    'Command',
+                    vscode.SymbolKind.Method,
+                    new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)),
+                    new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length))
+                );
+                symbols.push(commandSymbol);
+                continue;
+            }
+            // Match Labels
+            // labels take the form of <labelName>: and are used for goto statements
+            const labelRegex = "^\\s*\\b([a-zA-Z_][a-zA-Z0-9_]*)\\b:" // leading whitespace, label name, colon example: "label1:" or "  label1:"
+            const labelMatch = line.match(labelRegex);
+            if (labelMatch) {
+                const labelName = labelMatch[1];
+                const labelSymbol = new vscode.DocumentSymbol(
+                    labelName,
+                    'Label',
+                    vscode.SymbolKind.String,
+                    new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)),
+                    new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length))
+                );
+                symbols.push(labelSymbol);
+                continue;
+            }
+
         }
 
         return symbols;

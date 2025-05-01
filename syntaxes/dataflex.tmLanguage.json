@@ -13,14 +13,16 @@
 		},
 		{
 			"include": "#operators"
+		},
+		{
+			"include": "#labels"
 		}
-
 	],
 	"repository": {
 		"keywords": {
 			"patterns": [
 				{
-                    "match": "\\b(Procedure|End_Procedure|Function|End_Function|Function_Return|Begin|End)\\b",
+                    "match": "\\b(Procedure|End_Procedure|Function|End_Function|Function_Return|Begin|End|#COMMAND|#END_COMMAND)\\b",
                     "name": "keyword.control.dataflex"
                 },      
 				{	
@@ -118,7 +120,15 @@
                     "match": "^\\s*\\d+\\.\\s+.*\\?$"
                 }
             ]
-        }
+        },
+		"labels": {
+			"patterns": [
+				{
+					"match": "^\\s*\\b([a-zA-Z_][a-zA-Z0-9_]*)\\b:",
+					"name": "entity.name.label.dataflex"
+				}
+			]
+		}
 	},
 	"scopeName": "source.dataflex"
 }
