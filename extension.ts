@@ -69,6 +69,7 @@ class DataFlexDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
         
         const symbols: vscode.DocumentSymbol[] = [];
         const lines = document.getText().split('\n');
+        const objectStack: vscode.DocumentSymbol[] = []; // Stack to track nested objects
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
@@ -105,7 +106,14 @@ class DataFlexDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
                     new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)),
                     new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length))
                 );
-                symbols.push(functionSymbol);
+
+                if (objectStack.length > 0) {
+                    // Add this function as a child of the current object on the stack
+                    objectStack[objectStack.length - 1].children.push(functionSymbol);
+                } else {
+                    // Add this function to the top-level symbols
+                    symbols.push(functionSymbol);
+                }
                 continue;
             }
 
@@ -120,9 +128,17 @@ class DataFlexDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
                     new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)),
                     new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length))
                 );
-                symbols.push(procedureSymbol);
+
+                if (objectStack.length > 0) {
+                    // Add this procedure as a child of the current object on the stack
+                    objectStack[objectStack.length - 1].children.push(procedureSymbol);
+                } else {
+                    // Add this procedure to the top-level symbols
+                    symbols.push(procedureSymbol);
+                }
                 continue;
             }
+
             // Match Commands
             // Commands Take the Form of #COMMAND <commandName> and #END_COMMAND
             const commandMatch = line.match(/^#COMMAND\s+(\w+)/);
@@ -152,6 +168,88 @@ class DataFlexDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
                     new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length))
                 );
                 symbols.push(labelSymbol);
+                continue;
+            }
+            //Match Objects
+            // Objects take the form of Object <objectName> is a[n] <className> and End_Object
+            // Example: Object MyObject is a cMyClass
+            // Example 2: Object MyObject is an cMyClass
+            // End_Object closes the Object
+            const objectMatch = line.match(/^Object\s+(\w+)\s+is\s+a[n]?\s+(\w+)/);            
+            if (objectMatch) {
+                const objectName = objectMatch[1];
+                const className = objectMatch[2];
+                const objectSymbol = new vscode.DocumentSymbol(
+                    objectName,
+                    `Object of type ${className}`,
+                    vscode.SymbolKind.Object,
+                    new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)),
+                    new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length))
+                );
+
+                if (objectStack.length > 0) {
+                    // Add this object as a child of the current object on the stack
+                    objectStack[objectStack.length - 1].children.push(objectSymbol);
+                } else {
+                    // Add this object to the top-level symbols
+                    symbols.push(objectSymbol);
+                }
+
+                objectStack.push(objectSymbol); // Push the current object onto the stack
+                continue;
+            }
+
+            // Match End_Object
+            // End_Object closes the Object
+            const endObjectMatch = line.match(/^End_Object/);
+            if (endObjectMatch) {
+                if (objectStack.length > 0) {
+                    // Pop the current object from the stack
+                    const completedObject = objectStack.pop();
+                    if (completedObject) {
+                        // Update the range to include the end of the object
+                        completedObject.range = new vscode.Range(
+                            completedObject.range.start,
+                            new vscode.Position(i, line.length)
+                        );
+                    }
+                }
+                continue;
+            }
+
+            // Match Classes
+            // Classes take the form of Class <className> is a <superClass> and End_Class
+            // Example: Class MyClass is a cMySuperClass
+            // End_Class closes the Class
+            const classMatch2 = line.match(/^Class\s+(\w+)\s+is\s+a\s+(\w+)/);
+            if (classMatch2) {
+                const className = classMatch2[1];
+                const superClass = classMatch2[2];
+                const classSymbol = new vscode.DocumentSymbol(
+                    className,
+                    `Class of type ${superClass}`,
+                    vscode.SymbolKind.Class,
+                    new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)),
+                    new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length))
+                );
+                symbols.push(classSymbol);
+                continue;
+            }
+            //Match Structs
+            // Structs take the form of Struct <structName> and End_Struct
+            // Example: Struct MyStruct
+            // End_Struct closes the Struct
+            const structMatch = line.match(/^Struct\s+(\w+)/);
+            if (structMatch) {
+                const structName = structMatch[1];
+                const structSymbol = new vscode.DocumentSymbol(
+                    structName,
+                    'Struct',
+                    vscode.SymbolKind.Struct,
+                    new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)),
+                    new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length))
+                );
+                symbols.push(structSymbol);
                 continue;
             }
 
