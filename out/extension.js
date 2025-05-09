@@ -96,8 +96,7 @@ class DataFlexDocumentSymbolProvider {
         const symbols = [];
         const lines = document.getText().split('\n');
         const classStack = []; // Stack to track nested classes
-        const objectStack = []; // Stack to track nested objects
-        const structStack = []; // Stack to track nested screens
+        const objectStack = []; // Stack to track nested objects        
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
             // Match Classes
@@ -203,7 +202,7 @@ class DataFlexDocumentSymbolProvider {
             }
             // Match Commands
             // Commands Take the Form of #COMMAND <commandName> and #END_COMMAND
-            const commandMatch = line.match(/^#COMMAND\s+(\w+)/);
+            const commandMatch = line.match(/^#COMMAND\s+([^\s]+)/); // Updated regex to match any non-whitespace characters
             if (commandMatch) {
                 const commandName = commandMatch[1];
                 const commandSymbol = new vscode.DocumentSymbol(commandName, 'Command', vscode.SymbolKind.Method, new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)), new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)));
@@ -236,28 +235,7 @@ class DataFlexDocumentSymbolProvider {
             if (screenMatch) {
                 const screenName = screenMatch[1];
                 const screenSymbol = new vscode.DocumentSymbol(screenName, 'Screen', vscode.SymbolKind.Struct, new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)), new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)));
-                if (structStack.length > 0) {
-                    // Add this screen as a child of the current screen on the stack
-                    structStack[structStack.length - 1].children.push(screenSymbol);
-                }
-                else {
-                    // Add this screen to the top-level symbols
-                    symbols.push(screenSymbol);
-                }
-                structStack.push(screenSymbol); // Push the current screen onto the stack
-                continue;
-            }
-            // Match End of Screens
-            const endScreenMatch = line.match(/^\/\*/);
-            if (endScreenMatch) {
-                if (structStack.length > 0) {
-                    // Pop the current screen from the stack
-                    const completedScreen = structStack.pop();
-                    if (completedScreen) {
-                        // Update the range to include the end of the screen
-                        completedScreen.range = new vscode.Range(completedScreen.range.start, new vscode.Position(i, line.length));
-                    }
-                }
+                symbols.push(screenSymbol);
                 continue;
             }
         }

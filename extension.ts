@@ -213,7 +213,7 @@ class DataFlexDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
 
             // Match Commands
             // Commands Take the Form of #COMMAND <commandName> and #END_COMMAND
-            const commandMatch = line.match(/^#COMMAND\s+(\w+)/);
+            const commandMatch = line.match(/^#COMMAND\s+([^\s]+)/); // Updated regex to match any non-whitespace characters
             if (commandMatch) {
                 const commandName = commandMatch[1];
                 const commandSymbol = new vscode.DocumentSymbol(
