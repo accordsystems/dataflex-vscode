@@ -22,11 +22,11 @@
 		"keywords": {
 			"patterns": [
 				{
-                    "match": "\\b(Procedure|End_Procedure|Function|End_Function|Function_Return|Begin|End|#COMMAND|#END_COMMAND)\\b",
+                    "match": "\\b(Procedure|End_Procedure|Procedure_Return|Function|End_Function|Function_Return|Begin|End|#COMMAND|#END_COMMAND)\\b",
                     "name": "keyword.control.dataflex"
                 },      
 				{	
-					"match": "\\b(String|Number|Integer|Date|DateTime|Property|Global_Variable|Local_Variable|Define|Object|End_Object|Class|Struct|End_Struct)\\b",
+					"match": "\\b(String|Number|Integer|Date|DateTime|Property|Global_Variable|Local|Define|Object|End_Object|Class|End_Class|Struct|End_Struct)\\b",
 					"name": "keyword.declaration.dataflex"
 				},          
 				{
