@@ -1,0 +1,99 @@
+{
+  "name": "dataflex",
+  "displayName": "dataflex",
+  "description": "Dataflex Vs Code Language Support",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.99.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "languages": [
+      {
+        "id": "dataflex",
+        "aliases": [
+          "Dataflex",
+          "dataflex"
+        ],
+        "extensions": [
+          ".src",
+          ".vw",
+          ".sl",
+          ".dg",
+          ".rv",
+          ".bp",
+          ".pkg",
+          ".wo",
+          ".dd",
+          ".inc",
+          ".tpl",
+          ".dfo"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "dataflex",
+        "scopeName": "source.dataflex",
+        "path": "./syntaxes/dataflex.tmLanguage.json"
+      }
+    ],
+    "tokenColors": [
+      {
+        "scope": "keyword.operator.relational.dataflex",
+        "settings": {
+          "foreground": "#FF0000"
+        }
+      },
+      {
+        "scope": "keyword.operator.arithmetic.dataflex",
+        "settings": {
+          "foreground": "#FF0000"
+        }
+      },
+      {
+        "scope": "keyword.operator.boolean.dataflex",
+        "settings": {
+          "foreground": "#FF0000"
+        }
+      },
+      {
+        "scope": "keyword.operator.unary.dataflex",
+        "settings": {
+          "foreground": "#FF0000"
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command": "dataflex.compile",
+        "title": "Compile Dataflex Program"
+      }
+    ],
+    "documentSymbol": [
+      {
+        "language": "dataflex"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/accordsystems/dataflex-vscode.git"
+  },
+  "dependencies": {
+    "typescript": "^5.8.3",
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-protocol": "^3.17.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@types/vscode": "^1.99.1",
+    "vscode": "^1.1.37"
+  }
+}

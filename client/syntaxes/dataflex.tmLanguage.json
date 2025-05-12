@@ -1,0 +1,134 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Dataflex",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#operators"
+		},
+		{
+			"include": "#labels"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [
+				{
+                    "match": "\\b(Procedure|End_Procedure|Procedure_Return|Function|End_Function|Function_Return|Begin|End|#COMMAND|#END_COMMAND)\\b",
+                    "name": "keyword.control.dataflex"
+                },      
+				{	
+					"match": "\\b(String|Number|Integer|Date|DateTime|Property|Global_Variable|Local|Define|Object|End_Object|Class|End_Class|Struct|End_Struct)\\b",
+					"name": "keyword.declaration.dataflex"
+				},          
+				{
+					"match": "\\b(For|Loop|While|Until|Repeat)\\b",
+					"name": "keyword.control.loop.dataflex"
+				},
+				{
+					"match": "\\b(Begin|End|If|Else|Else If|Case|Case Break)\\b",
+					"name": "keyword.control.conditional.dataflex"
+				},				
+				{
+					"match": "\\b(End|Case End)\\b",
+					"name": "keyword.control.end.dataflex"
+				},
+				{
+					"match": "\\b(Move|Get|Set|Send)\\b",
+					"name": "keyword.access.dataflex"
+				},
+				{
+					"match": "\\bto\\b",
+					"name": "keyword.access.dataflex"
+				},
+				{
+					"match": "\\bfrom\\b",
+					"name": "keyword.access.dataflex"
+				}		
+			]	
+		},
+		"operators": {
+			"patterns": [
+				{
+					"match": "\\+|\\-|\\*|\\/|\\^",
+					"name": "keyword.operator.arithmetic.dataflex"
+				},
+				{
+					"match": "\\b(Max|Min)\\b",
+					"name": "keyword.operator.function.dataflex"
+				},
+				{
+					"match": "\\b(Not)\\b",
+					"name": "keyword.operator.unary.dataflex"
+				},
+				{
+					"match": "(?<!\\w)(=|<>|<|>|<=|>=)(?!\\w)",
+					"name": "keyword.operator.relational.dataflex"
+				},
+				{
+					"match": "\\b(Contains|Matches)\\b",
+					"name": "keyword.operator.relational.dataflex"
+				},
+				{
+					"match": "\\b(And|Or)\\b",
+					"name": "keyword.operator.boolean.dataflex"
+				},
+				{
+					"match": "\\b(Iand|Ior)\\b",
+					"name": "keyword.operator.bitwise.dataflex"
+				}
+			]
+		},
+		"strings": {			
+		},
+		"comments": {
+			"patterns": [
+				{
+					"name": "comment.line.double-slash.dataflex",
+					"match": "//.*$"
+				}				
+			]			
+		},	
+		"screen": {
+            "patterns": [
+                {
+                    "name": "entity.name.section.screen.dataflex",
+                    "match": "^/screenINFO\\s+\\w+"
+                },
+                {
+                    "name": "entity.name.border.screen.dataflex",
+                    "match": "^[\u250C\u2500\u2510\u2502\u2514\u2518]+$"
+                },
+                {
+                    "name": "entity.name.text.screen.dataflex",
+                    "match": "^[\u2502].*[\u2502]$"
+                },
+                {
+                    "name": "entity.name.placeholder.screen.dataflex",
+                    "match": "_"
+                },
+                {
+                    "name": "entity.name.option.screen.dataflex",
+                    "match": "^\\s*\\d+\\.\\s+.*\\?$"
+                }
+            ]
+        },
+		"labels": {
+			"patterns": [
+				{
+					"match": "^\\s*\\b([a-zA-Z_][a-zA-Z0-9_]*)\\b:",
+					"name": "entity.name.label.dataflex"
+				}
+			]
+		}
+	},
+	"scopeName": "source.dataflex"
+}
