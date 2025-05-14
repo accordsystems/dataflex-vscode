@@ -256,8 +256,7 @@ class DataFlexDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
                     new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)),
                     new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length))
                 );
-                symbols.push(structSymbol);
-                const commandName = commandMatch[1];
+                symbols.push(structSymbol);                
             }
 
             // Match Screens
