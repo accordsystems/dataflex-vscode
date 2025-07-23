@@ -45,25 +45,12 @@
     ],
     "tokenColors": [
       {
-        "scope": "keyword.operator.relational.dataflex",
-        "settings": {
-          "foreground": "#FF0000"
-        }
-      },
-      {
-        "scope": "keyword.operator.arithmetic.dataflex",
-        "settings": {
-          "foreground": "#FF0000"
-        }
-      },
-      {
-        "scope": "keyword.operator.boolean.dataflex",
-        "settings": {
-          "foreground": "#FF0000"
-        }
-      },
-      {
-        "scope": "keyword.operator.unary.dataflex",
+        "scope": [
+          "keyword.operator",
+          "keyword.operator.comparison",
+          "keyword.operator.comparison.dataflex",
+          "keyword.operator.comparison.dataflex source.dataflex"
+        ],
         "settings": {
           "foreground": "#FF0000"
         }

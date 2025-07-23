@@ -228,7 +228,6 @@ class DataFlexDocumentSymbolProvider {
                 const structName = structMatch[1];
                 const structSymbol = new vscode.DocumentSymbol(structName, 'Struct', vscode.SymbolKind.Struct, new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)), new vscode.Range(new vscode.Position(i, 0), new vscode.Position(i, line.length)));
                 symbols.push(structSymbol);
-                continue;
             }
             // Match Screens
             const screenMatch = line.match(/^\/screen(\w+)/);
