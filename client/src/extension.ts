@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
+import { activate as activateCommandCompileConsoleMode } from './commands/compileConsoleMode';
 
 const DATAFLEX_KEYWORDS = {
-    CONTROL: ['Procedure', 'End_Procedure', 'Function', 'End_Function', 'Begin', 'End'],
+    CONTROL: ['Procedure', 'End_Procedure', 'Function', 'End_Function', 'Begin', 'End', 'Use', '#INCLUDE', '#IFDEF', '#ENDIF', '#ELSE', '#IFNDEF', '#COMMAND', '#ENDCOMMAND'],
     DECLARATION: ['String', 'Number', 'Integer', 'Date', 'DateTime', 
         'Property', 
         'Global_Variable', 'Local_Variable', 
@@ -20,6 +21,7 @@ const DATAFLEX_FILE_EXTENSIONS = [
 ];
 
 function activate(context: vscode.ExtensionContext) {
+    console.log('Dataflex Extension activated'); 
     const definitionProvider = vscode.languages.registerDefinitionProvider('dataflex', {
         provideDefinition: async (document, position, token) => {
             const wordRange = document.getWordRangeAtPosition(position);
@@ -56,6 +58,16 @@ function activate(context: vscode.ExtensionContext) {
             `}`
         );
     }
+
+    //commands
+    activateCommandCompileConsoleMode(context);
+
+    const command = 'dataflex.compileConsoleMode2';
+    const commandHandler = () => {
+        console.log('Compile in Console Mode 2 command executed');
+    }
+    console.log('Dataflex Extension: registering dataflex.compileConsoleMode2'); 
+    context.subscriptions.push(vscode.commands.registerCommand(command, commandHandler));
 }
 
 // This class provides the DocumentSymbolProvider for DataFlex files (The Outline view)

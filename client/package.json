@@ -2,15 +2,16 @@
   "name": "dataflex",
   "displayName": "dataflex",
   "description": "Dataflex Vs Code Language Support",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.99.0"
   },
   "categories": [
     "Programming Languages"
   ],
-  "main": "./out/extension.js",
-  "activationEvents": [],
+  "main": "./out/src/extension.js",
+  "activationEvents": [           
+  ],
   "contributes": {
     "languages": [
       {
@@ -59,9 +60,9 @@
     ],
     "commands": [
       {
-        "command": "dataflex.compile",
-        "title": "Compile Dataflex Program"
-      }
+        "command": "dataflex.compileConsoleMode",
+        "title": "Compile Dataflex Console Mode Program"
+      }      
     ],
     "documentSymbol": [
       {

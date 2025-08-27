@@ -43,8 +43,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = __importStar(require("vscode"));
+const compileConsoleMode_1 = require("./commands/compileConsoleMode");
 const DATAFLEX_KEYWORDS = {
-    CONTROL: ['Procedure', 'End_Procedure', 'Function', 'End_Function', 'Begin', 'End'],
+    CONTROL: ['Procedure', 'End_Procedure', 'Function', 'End_Function', 'Begin', 'End', 'Use', '#INCLUDE', '#IFDEF', '#ENDIF', '#ELSE', '#IFNDEF', '#COMMAND', '#ENDCOMMAND'],
     DECLARATION: ['String', 'Number', 'Integer', 'Date', 'DateTime',
         'Property',
         'Global_Variable', 'Local_Variable',
@@ -61,6 +62,7 @@ const DATAFLEX_FILE_EXTENSIONS = [
     '.src', '.vw', '.sl', '.dg', '.rv', '.dd', '.bp', '.pkg', '.wo', '.dd', '.inc', '.tpl', '.dfo'
 ];
 function activate(context) {
+    console.log('Dataflex Extension activated');
     const definitionProvider = vscode.languages.registerDefinitionProvider('dataflex', {
         provideDefinition: (document, position, token) => __awaiter(this, void 0, void 0, function* () {
             const wordRange = document.getWordRangeAtPosition(position);
@@ -87,6 +89,14 @@ function activate(context) {
             `  "*.src": "dataflex"\n` +
             `}`);
     }
+    //commands
+    (0, compileConsoleMode_1.activate)(context);
+    const command = 'dataflex.compileConsoleMode2';
+    const commandHandler = () => {
+        console.log('Compile in Console Mode 2 command executed');
+    };
+    console.log('Dataflex Extension: registering dataflex.compileConsoleMode2');
+    context.subscriptions.push(vscode.commands.registerCommand(command, commandHandler));
 }
 // This class provides the DocumentSymbolProvider for DataFlex files (The Outline view)
 // It will provide symbols for classes, functions, procedures, commands, and labels
