@@ -46,7 +46,12 @@ function activate(context) {
             return;
         }
         const fileName = editor.document.fileName;
-        const scriptPath = 'D:\\source\\dataflex\\Import2000-DF32\\Compile\\x64\\DFComp64-cI20.ps1';
+        const config = vscode.workspace.getConfiguration('dataflex');
+        const scriptPath = config.get('consoleMode.compileScriptPath');
+        if (!scriptPath) {
+            vscode.window.showErrorMessage('Compile script path is not configured');
+            return;
+        }
         (0, child_process_1.execFile)('pwsh.exe', ['-File', scriptPath, fileName], (error, stdout, stderr) => {
             if (error) {
                 console.error('Error executing script:', error);

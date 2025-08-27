@@ -68,7 +68,17 @@
       {
         "language": "dataflex"
       }
-    ]
+    ],
+    "configuration": {      
+      "title": "Dataflex",
+      "properties": {
+        "dataflex.consoleMode.compileScriptPath": {
+          "type": "string",
+          "default": "D:\\source\\dataflex\\Import2000-DF32\\Compile\\x64\\DFComp64-cI20.ps1",
+          "description": "Path to the Dataflex Console Mode Compile Script"
+        }        
+      }
+    }
   },
   "repository": {
     "type": "git",
