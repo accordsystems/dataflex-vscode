@@ -1,0 +1,35 @@
+{
+  "name": "dataflex-vscode",
+  "version": "1.0.0",
+  "description": "Dataflex Language Server and Client for VsCode",
+  "homepage": "https://github.com/accordsystems/dataflex-vscode#readme",
+  "bugs": {
+    "url": "https://github.com/accordsystems/dataflex-vscode/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/accordsystems/dataflex-vscode.git"
+  },
+  "license": "ISC",
+  "author": "Kyle Campbell",
+  "type": "commonjs",
+  "main": "./client/out/extension",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "contributes": {
+    "configuration":{
+      "title": "example configuration",
+      "type": "object",
+      "properties": {
+        "dataflexLanguageServer.maxNumberOfProblems": {
+          "type": "integer",
+          "default": 100,
+          "scope": "resource",
+          "description": "The maximum number of problems reported by the Dataflex language server."
+        }
+      }
+    }
+  }
+    
+}
