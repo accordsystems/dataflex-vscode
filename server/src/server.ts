@@ -14,6 +14,7 @@ import {
 } from 'vscode-languageserver/node';
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
+import { AutoCorrector } from './autoCorrects/autoCorrects';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -25,6 +26,7 @@ let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 let hasConfigurationCapability: boolean = false;
 let hasWorkspaceFolderCapability: boolean = false;
 let hasDiagnosticRelatedInformationCapability: boolean = false;
+let hasAutoCorrectCapability: boolean = false;
 
 connection.onInitialize((params: InitializeParams) => {
   let capabilities = params.capabilities;
@@ -48,6 +50,9 @@ connection.onInitialize((params: InitializeParams) => {
       textDocumentSync: TextDocumentSyncKind.Incremental,
       // Tell the client that this server supports code completion.
       completionProvider: {
+        resolveProvider: true
+      },
+      codeActionProvider: {
         resolveProvider: true
       }
     }
@@ -110,7 +115,7 @@ function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
   if (!result) {
     result = connection.workspace.getConfiguration({
       scopeUri: resource,
-      section: 'languageServerExample'
+      section: 'dataflex-lsp'
     });
     documentSettings.set(resource, result);
   }
@@ -124,7 +129,21 @@ documents.onDidClose(e => {
 
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
-documents.onDidChangeContent(change => {
+documents.onDidChangeContent(async change => {  
+  const edits = AutoCorrector.autocorrectTextDocument(change.document);
+
+  //apply edits
+  if (edits.length > 0) {
+    await connection.workspace.applyEdit({
+      documentChanges: [
+        {
+          textDocument: { uri: change.document.uri, version: change.document.version },
+          edits
+        }
+      ]
+    });
+  }
+
   validateTextDocument(change.document);
 });
 

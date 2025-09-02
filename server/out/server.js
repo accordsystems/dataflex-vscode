@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_1 = require("vscode-languageserver/node");
 const vscode_languageserver_textdocument_1 = require("vscode-languageserver-textdocument");
+const autoCorrects_1 = require("./autoCorrects/autoCorrects");
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 let connection = (0, node_1.createConnection)(node_1.ProposedFeatures.all);
@@ -10,6 +11,7 @@ let documents = new node_1.TextDocuments(vscode_languageserver_textdocument_1.Te
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
+let hasAutoCorrectCapability = false;
 connection.onInitialize((params) => {
     let capabilities = params.capabilities;
     // Does the client support the `workspace/configuration` request?
@@ -24,6 +26,9 @@ connection.onInitialize((params) => {
             textDocumentSync: node_1.TextDocumentSyncKind.Incremental,
             // Tell the client that this server supports code completion.
             completionProvider: {
+                resolveProvider: true
+            },
+            codeActionProvider: {
                 resolveProvider: true
             }
         }
@@ -74,7 +79,7 @@ function getDocumentSettings(resource) {
     if (!result) {
         result = connection.workspace.getConfiguration({
             scopeUri: resource,
-            section: 'languageServerExample'
+            section: 'dataflex-lsp'
         });
         documentSettings.set(resource, result);
     }
@@ -86,7 +91,19 @@ documents.onDidClose(e => {
 });
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
-documents.onDidChangeContent(change => {
+documents.onDidChangeContent(async (change) => {
+    const edits = autoCorrects_1.AutoCorrector.autocorrectTextDocument(change.document);
+    //apply edits
+    if (edits.length > 0) {
+        await connection.workspace.applyEdit({
+            documentChanges: [
+                {
+                    textDocument: { uri: change.document.uri, version: change.document.version },
+                    edits
+                }
+            ]
+        });
+    }
     validateTextDocument(change.document);
 });
 async function validateTextDocument(textDocument) {
