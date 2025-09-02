@@ -91,5 +91,9 @@
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@types/vscode": "^1.99.1"
+  },
+  "scripts": {
+    "build": "tsc -p ./",
+    "watch": "tsc -p ./ --watch"
   }
 }

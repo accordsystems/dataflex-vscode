@@ -14,9 +14,14 @@
   "author": "Kyle Campbell",
   "type": "commonjs",
   "main": "./client/out/extension",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -b",
+		"watch": "tsc -b -w",
+		"lint": "eslint",
+		"postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
+		"test": "sh ./scripts/e2e.sh"
+	},
   "contributes": {
     "configuration":{
       "title": "example configuration",
