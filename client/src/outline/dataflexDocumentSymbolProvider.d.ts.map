@@ -1,0 +1,1 @@
+{"version":3,"file":"dataflexDocumentSymbolProvider.d.ts","sourceRoot":"","sources":["dataflexDocumentSymbolProvider.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,MAAM,MAAM,QAAQ,CAAC;AAKjC,qBAAa,8BAA+B,YAAW,MAAM,CAAC,sBAAsB;IACzE,sBAAsB,CACzB,QAAQ,EAAE,MAAM,CAAC,YAAY,EAC7B,KAAK,EAAE,MAAM,CAAC,iBAAiB,GAChC,MAAM,CAAC,cAAc,CAAC,MAAM,CAAC,cAAc,EAAE,CAAC;CAoNpD"}

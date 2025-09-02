@@ -1,0 +1,1 @@
+{"root":["../src/extension.ts","../src/commands/compileconsolemode.ts","../src/constants/constants.ts","../src/outline/dataflexdefinitionprovider.ts","../src/outline/dataflexdocumentsymbolprovider.ts","../src/utils/checksrcencoding.ts"],"version":"5.9.2"}

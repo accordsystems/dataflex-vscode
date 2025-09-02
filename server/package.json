@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "typescript": "^5.9.2",
     "vscode-languageserver": "^9.0.1"
   }
 }
