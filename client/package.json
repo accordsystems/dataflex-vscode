@@ -2,14 +2,14 @@
   "name": "dataflex",
   "displayName": "dataflex",
   "description": "Dataflex Vs Code Language Support",
-  "version": "0.0.2",
+  "version": "1.0.2",
   "engines": {
-    "vscode": "^1.99.0"
+    "vscode": "^1.103.2"
   },
   "categories": [
     "Programming Languages"
   ],
-  "main": "./out/src/extension",
+  "main": "./out/extension",
   "activationEvents": [],
   "contributes": {
     "languages": [
@@ -84,12 +84,9 @@
     "url": "https://github.com/accordsystems/dataflex-vscode.git"
   },
   "dependencies": {
-    "typescript": "^5.8.3",
-    "vcse": "^1.0.1",
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
     "@types/vscode": "^1.99.1"
   },
   "scripts": {

@@ -8,9 +8,7 @@ import {
   TransportKind
 } from 'vscode-languageclient/node';
 
-let client: LanguageClient;
-
-export function activate(context: ExtensionContext)  {
+export function activate(context: ExtensionContext) : LanguageClient {
   // The server is implemented in node
   let serverModule = context.asAbsolutePath(path.join('server', 'out', 'server.js'));
   // The debug options for the server
@@ -39,7 +37,7 @@ export function activate(context: ExtensionContext)  {
   };
 
   // Create the language client and start the client.
-  client = new LanguageClient(
+  const client = new LanguageClient(
     'languageServerExample',
     'Language Server Example',
     serverOptions,
@@ -49,11 +47,4 @@ export function activate(context: ExtensionContext)  {
   // Start the client. This will also launch the server
   client.start();
   return client;
-}
-
-export function deactivate(): Thenable<void> | undefined {
-  if (!client) {
-    return undefined;
-  }
-  return client.stop();
 }
