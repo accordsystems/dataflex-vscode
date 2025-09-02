@@ -1,6 +1,6 @@
 {
   "name": "dataflex-vscode",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Dataflex Language Server and Client for VsCode",
   "homepage": "https://github.com/accordsystems/dataflex-vscode#readme",
   "bugs": {
