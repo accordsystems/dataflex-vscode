@@ -13,7 +13,10 @@
   "license": "ISC",
   "author": "Kyle Campbell",
   "type": "commonjs",
-  "main": "./client/out/extension",
+  "main": "./client/out/src/extension",
+  "engines": {
+		"vscode": "^1.100.0"
+	},
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -b",
@@ -22,6 +25,9 @@
     "postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
     "test": "sh ./scripts/e2e.sh"
   },
+  "activationEvents": [
+		"onLanguage:dataflex"
+	],
   "contributes": {
     "configuration": {
       "title": "example configuration",
