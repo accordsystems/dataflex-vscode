@@ -18,3 +18,4 @@ exports.DATAFLEX_KEYWORDS = {
 exports.DATAFLEX_FILE_EXTENSIONS = [
     '.src', '.vw', '.sl', '.dg', '.rv', '.dd', '.bp', '.pkg', '.wo', '.dd', '.inc', '.tpl', '.dfo'
 ];
+//# sourceMappingURL=constants.js.map

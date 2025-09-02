@@ -14,6 +14,9 @@
   "author": "Kyle Campbell",
   "type": "commonjs",
   "main": "./client/out/src/extension",
+  "activationEvents": [
+		"onLanguage:dataflex"
+	],
   "engines": {
 		"vscode": "^1.100.0"
 	},
@@ -22,12 +25,8 @@
     "compile": "tsc -b",
     "watch": "tsc -b -w",
     "lint": "eslint",
-    "postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
-    "test": "sh ./scripts/e2e.sh"
-  },
-  "activationEvents": [
-		"onLanguage:dataflex"
-	],
+    "postinstall": "cd client && npm install && cd ../server && npm install && cd .."    
+  },  
   "contributes": {
     "configuration": {
       "title": "example configuration",
