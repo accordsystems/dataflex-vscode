@@ -4,7 +4,7 @@ import { activate as activateLanguageClient } from './languageClient/dataflexLan
 import { activate as activateCommandCompileConsoleMode } from './commands/compileConsoleMode';
 import { DataFlexDocumentSymbolProvider } from './outline/dataflexDocumentSymbolProvider';
 import { DataFlexDefinitionProvider } from './outline/dataflexDefinitionProvider';
-import { checkSrcEncoding } from './utils/checkSrcEncoding';
+import { checkSrcEncoding } from './utils/checkSrcEncoding'; ;
 import { LanguageClient } from 'vscode-languageclient/node';
 
 let client: LanguageClient;

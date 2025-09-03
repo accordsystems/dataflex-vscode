@@ -14,9 +14,7 @@
   "author": "Kyle Campbell",
   "type": "commonjs",
   "main": "./client/out/extension",
-  "activationEvents": [
-    "onLanguage:dataflex"
-  ],
+  "activationEvents": [],  
   "engines": {
     "vscode": "^1.103.0"
   },
@@ -28,17 +26,78 @@
   },
   "contributes": {
     "configuration": {
-      "title": "example configuration",
+      "title": "dataflex configuration",
       "type": "object",
       "properties": {
-        "dataflexLanguageServer.maxNumberOfProblems": {
+        "dataflex.languageServer.maxNumberOfProblems": {
           "type": "integer",
           "default": 100,
           "scope": "resource",
           "description": "The maximum number of problems reported by the Dataflex language server."
+        },
+        "dataflex.consoleMode.compileScriptPath": {
+          "type": "string",
+          "default": "D:\\source\\dataflex\\Import2000-DF32\\Compile\\x64\\DFComp64-cI20.ps1",
+          "description": "Path to the Dataflex Console Mode Compile Script"
         }
       }
-    }
+    },  
+    "languages": [
+      {
+        "id": "dataflex",
+        "aliases": [
+          "Dataflex",
+          "dataflex"
+        ],
+        "extensions": [
+          ".src",
+          ".vw",
+          ".sl",
+          ".dg",
+          ".rv",
+          ".bp",
+          ".pkg",
+          ".wo",
+          ".dd",
+          ".inc",
+          ".tpl",
+          ".cmd",
+          ".dfo"
+        ],
+        "configuration": "./client/src/syntaxes/language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "dataflex",
+        "scopeName": "source.dataflex",
+        "path": "./client/src/syntaxes/dataflex.tmLanguage.json"
+      }
+    ],
+    "tokenColors": [
+      {
+        "scope": [
+          "keyword.operator",
+          "keyword.operator.comparison",
+          "keyword.operator.comparison.dataflex",
+          "keyword.operator.comparison.dataflex source.dataflex"
+        ],
+        "settings": {
+          "foreground": "#FF0000"
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command": "dataflex.compileConsoleMode",
+        "title": "Compile Dataflex Console Mode Program"
+      }
+    ],
+    "documentSymbol": [
+      {
+        "language": "dataflex"
+      }
+    ]    
   },
   "devDependencies": {
     "@types/node": "^22.18.0",

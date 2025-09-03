@@ -8,6 +8,7 @@ const compileConsoleMode_1 = require("./commands/compileConsoleMode");
 const dataflexDocumentSymbolProvider_1 = require("./outline/dataflexDocumentSymbolProvider");
 const dataflexDefinitionProvider_1 = require("./outline/dataflexDefinitionProvider");
 const checkSrcEncoding_1 = require("./utils/checkSrcEncoding");
+;
 let client;
 function activate(context) {
     console.log('Dataflex Extension activated');

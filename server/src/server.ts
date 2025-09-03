@@ -10,11 +10,16 @@ import {
   CompletionItemKind,
   TextDocumentPositionParams,
   TextDocumentSyncKind,
-  InitializeResult
+  InitializeResult,
+  CodeAction,
+  CodeActionKind,
+  CodeActionParams,
+  TextEdit
 } from 'vscode-languageserver/node';
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { AutoCorrector } from './autoCorrects/autoCorrects';
+import { DataFlexCodeActions } from './codeActions/DataflexCodeActions';
+import { DataFlexValidator } from './validation/DataFlexValidator';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -52,9 +57,8 @@ connection.onInitialize((params: InitializeParams) => {
       completionProvider: {
         resolveProvider: true
       },
-      codeActionProvider: {
-        resolveProvider: true
-      }
+      // the client that this server supports code actions
+      codeActionProvider: true
     }
   };
   if (hasWorkspaceFolderCapability) {
@@ -115,7 +119,7 @@ function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
   if (!result) {
     result = connection.workspace.getConfiguration({
       scopeUri: resource,
-      section: 'dataflex-lsp'
+      section: 'dataflex.languageServer'
     });
     documentSettings.set(resource, result);
   }
@@ -127,68 +131,27 @@ documents.onDidClose(e => {
   documentSettings.delete(e.document.uri);
 });
 
+connection.onCodeAction((params: CodeActionParams): CodeAction[] => {
+  const document = documents.get(params.textDocument.uri);
+  if (!document) {
+    return [];
+  }
+  // Use the range provided by the client (usually the selection)
+  return DataFlexCodeActions.getCodeActions(document, params.range);
+});
+
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(async change => {  
-  const edits = AutoCorrector.autocorrectTextDocument(change.document);
-
-  //apply edits
-  if (edits.length > 0) {
-    await connection.workspace.applyEdit({
-      documentChanges: [
-        {
-          textDocument: { uri: change.document.uri, version: change.document.version },
-          edits
-        }
-      ]
-    });
-  }
-
   validateTextDocument(change.document);
 });
 
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
   // In this simple example we get the settings for every validate run.
-  let settings = await getDocumentSettings(textDocument.uri);
-
-  // The validator creates diagnostics for all uppercase words length 2 and more
-  let text = textDocument.getText();
-  let pattern = /\b[A-Z]{2,}\b/g;
-  let m: RegExpExecArray | null;
-
-  let problems = 0;
   let diagnostics: Diagnostic[] = [];
-  while ((m = pattern.exec(text)) && problems < settings.maxNumberOfProblems) {
-    problems++;
-    let diagnostic: Diagnostic = {
-      severity: DiagnosticSeverity.Warning,
-      range: {
-        start: textDocument.positionAt(m.index),
-        end: textDocument.positionAt(m.index + m[0].length)
-      },
-      message: `${m[0]} is all uppercase.`,
-      source: 'ex'
-    };
-    if (hasDiagnosticRelatedInformationCapability) {
-      diagnostic.relatedInformation = [
-        {
-          location: {
-            uri: textDocument.uri,
-            range: Object.assign({}, diagnostic.range)
-          },
-          message: 'Spelling matters'
-        },
-        {
-          location: {
-            uri: textDocument.uri,
-            range: Object.assign({}, diagnostic.range)
-          },
-          message: 'Particularly for names'
-        }
-      ];
-    }
+  DataFlexValidator.validateDocument(textDocument).forEach(diagnostic => {
     diagnostics.push(diagnostic);
-  }
+  });
 
   // Send the computed diagnostics to VS Code.
   connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });

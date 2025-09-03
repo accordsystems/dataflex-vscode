@@ -1,84 +1,13 @@
 {
-  "name": "dataflex",
-  "displayName": "dataflex",
-  "description": "Dataflex Vs Code Language Support",
+  "name": "dataflex-lsp-client",  
+  "description": "Dataflex VS Code Language Support",
   "version": "1.0.2",
   "engines": {
     "vscode": "^1.103.2"
   },
   "categories": [
     "Programming Languages"
-  ],
-  "main": "./out/extension",
-  "activationEvents": [],
-  "contributes": {
-    "languages": [
-      {
-        "id": "dataflex",
-        "aliases": [
-          "Dataflex",
-          "dataflex"
-        ],
-        "extensions": [
-          ".src",
-          ".vw",
-          ".sl",
-          ".dg",
-          ".rv",
-          ".bp",
-          ".pkg",
-          ".wo",
-          ".dd",
-          ".inc",
-          ".tpl",
-          ".cmd",
-          ".dfo"
-        ],
-        "configuration": "./language-configuration.json"
-      }
-    ],
-    "grammars": [
-      {
-        "language": "dataflex",
-        "scopeName": "source.dataflex",
-        "path": "./syntaxes/dataflex.tmLanguage.json"
-      }
-    ],
-    "tokenColors": [
-      {
-        "scope": [
-          "keyword.operator",
-          "keyword.operator.comparison",
-          "keyword.operator.comparison.dataflex",
-          "keyword.operator.comparison.dataflex source.dataflex"
-        ],
-        "settings": {
-          "foreground": "#FF0000"
-        }
-      }
-    ],
-    "commands": [
-      {
-        "command": "dataflex.compileConsoleMode",
-        "title": "Compile Dataflex Console Mode Program"
-      }
-    ],
-    "documentSymbol": [
-      {
-        "language": "dataflex"
-      }
-    ],
-    "configuration": {
-      "title": "Dataflex",
-      "properties": {
-        "dataflex.consoleMode.compileScriptPath": {
-          "type": "string",
-          "default": "D:\\source\\dataflex\\Import2000-DF32\\Compile\\x64\\DFComp64-cI20.ps1",
-          "description": "Path to the Dataflex Console Mode Compile Script"
-        }
-      }
-    }
-  },
+  ],    
   "repository": {
     "type": "git",
     "url": "https://github.com/accordsystems/dataflex-vscode.git"
@@ -88,9 +17,5 @@
   },
   "devDependencies": {
     "@types/vscode": "^1.99.1"
-  },
-  "scripts": {
-    "build": "tsc -p ./",
-    "watch": "tsc -p ./ --watch"
-  }
+  }  
 }
