@@ -1,1 +1,1 @@
-{"root":["./src/server.ts","./src/codeactions/dataflexcodeactions.ts","./src/validation/dataflexvalidator.ts"],"version":"5.9.2"}
+{"root":["./src/server.ts","./src/codeactions/dataflexcodeactions.ts","./src/common/dataflexkeywords.ts","./src/validation/dataflexvalidator.ts"],"version":"5.9.2"}

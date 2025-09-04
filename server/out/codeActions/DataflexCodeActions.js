@@ -48,7 +48,7 @@ class DataFlexCodeActions {
     static suggestFunction(document, lineText, range) {
         const actions = [];
         //1. Stops if it is "Function". Then Matches any casing of Function
-        const regex = /\b(?!Function\b)[Ff][Uu][Nn][Cc][Tt][Ii][Oo][Nn]\b/g;
+        const regex = /\b(?!Function\b)[Ff][Uu][Nn][Cc][Tt][Ii][Oo][Nn]\b/g; //creates a regexp object
         if (lineText.match(regex)) {
             let match;
             while ((match = regex.exec(lineText)) !== null) {
