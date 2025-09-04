@@ -1,6 +1,6 @@
 {
   "name": "dataflex-vscode",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Dataflex Language Server and Client for VsCode",
   "homepage": "https://github.com/accordsystems/dataflex-vscode#readme",
   "bugs": {
@@ -14,14 +14,14 @@
   "author": "Kyle Campbell",
   "type": "commonjs",
   "main": "./client/out/extension",
-  "activationEvents": [],  
+  "activationEvents": [],
   "engines": {
     "vscode": "^1.103.0"
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -b",
-    "watch": "tsc -b -w",    
+    "watch": "tsc -b -w",
     "postinstall": "cd client && npm install && cd ../server && npm install && cd .."
   },
   "contributes": {
@@ -41,7 +41,7 @@
           "description": "Path to the Dataflex Console Mode Compile Script"
         }
       }
-    },  
+    },
     "languages": [
       {
         "id": "dataflex",
@@ -97,7 +97,7 @@
       {
         "language": "dataflex"
       }
-    ]    
+    ]
   },
   "devDependencies": {
     "@types/node": "^22.18.0",
