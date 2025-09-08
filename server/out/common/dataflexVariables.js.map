@@ -1,0 +1,1 @@
+{"version":3,"file":"dataflexVariables.js","sourceRoot":"","sources":["../../src/common/dataflexVariables.ts"],"names":[],"mappings":";;;AAAA,yBAAyB;AACZ,QAAA,kBAAkB,GAAG;IAC9B,MAAM,EAAE,QAAQ;IAChB,MAAM,EAAE,QAAQ;IAChB,OAAO,EAAE,SAAS;IAClB,OAAO,EAAG,SAAS;IACnB,MAAM,EAAG,QAAQ;IACjB,IAAI,EAAE,MAAM;IACZ,QAAQ,EAAG,UAAU;IACrB,KAAK,EAAG,OAAO;CACT,CAAC"}

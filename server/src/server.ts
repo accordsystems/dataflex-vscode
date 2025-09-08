@@ -21,10 +21,12 @@ import {
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { DataFlexCodeActions } from './codeActions/DataflexCodeActions';
 import { DataFlexValidator } from './validation/DataFlexValidator';
-import { Location, Position, Range} from 'vscode-languageserver/node'; // Added for Definition Support
-import { DataFlexSymbolIndex } from './Symbols/SymbolIndex';
+import { Location, Position, Range } from 'vscode-languageserver/node'; // Added for Definition Support
+import { SymbolIndexBuilder } from './Symbols/SymbolIndexBuilder';
+import { DefinitionFinder } from './Definitions/DefinitionFinder';
 
-const symbolIndex = new DataFlexSymbolIndex(); // updates symbol index, finds definitions
+const symbolIndex = new SymbolIndexBuilder(); // updates symbol index, finds definitions
+const definitionFinder = new DefinitionFinder(); // finds definitions
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -148,9 +150,9 @@ connection.onCodeAction((params: CodeActionParams): CodeAction[] => {
 
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
-documents.onDidChangeContent(async change => {  
+documents.onDidChangeContent(async change => {
   validateTextDocument(change.document);
-  symbolIndex.indexDocument(change.document); // Update symbol index on document change
+  SymbolIndexBuilder.indexDocument(change.document); // Update symbol index on document change
 });
 
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
@@ -206,19 +208,21 @@ connection.onCompletionResolve(
 );
 
 //Definition Handler for Go to Definition Support. Currently not implemented, First step is current document
-connection.onDefinition((params : DefinitionParams) : Location[] => { 
-  const document = documents.get(params.textDocument.uri)
-  if (!document) {
-    return [];
-  }
+connection.onDefinition(
+  (params: DefinitionParams): Location[] => {
+    const document = documents.get(params.textDocument.uri)
+    if (!document) {
+      return [];
+    }
 
-  const position: Position = params.position
-  const word = getWordAtPosition(document, position)
-  if (!word) {
-    return [];
+    const position: Position = params.position
+    const word = getWordAtPosition(document, position)
+    if (!word) {
+      return [];
+    }
+    return definitionFinder.findDefinitions(word, position, params.textDocument.uri);
   }
-  return symbolIndex.findDefinitions(word, document);
-});
+);
 
 // Helper function to get the word range at a given position
 // Helper function to get word at position
@@ -226,16 +230,16 @@ function getWordRangeAtPosition(document: TextDocument, position: Position): Ran
   const line = document.getText().split(/\r?\n/)[position.line];
   const wordRegex = /\b\w+\b/g;
   let match: RegExpExecArray | null;
-  
+
   while ((match = wordRegex.exec(line)) !== null) {
-    if (match.index <= position.character && 
-        position.character <= match.index + match[0].length) {
+    if (match.index <= position.character &&
+      position.character <= match.index + match[0].length) {
       return {
         start: { line: position.line, character: match.index },
         end: { line: position.line, character: match.index + match[0].length }
       };
     }
-  }  
+  }
   return { start: position, end: position };
 }
 
@@ -244,9 +248,9 @@ function getWordAtPosition(document: TextDocument, position: Position): string |
   return document.getText(wordRange) || null;
 }
 
+
 // Make the text document manager listen on the connection
 // for open, change and close text document events
 documents.listen(connection);
-
 // Listen on the connection
 connection.listen();

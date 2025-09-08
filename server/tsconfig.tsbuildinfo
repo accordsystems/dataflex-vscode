@@ -1,1 +1,1 @@
-{"root":["./src/server.ts","./src/codeactions/dataflexcodeactions.ts","./src/common/dataflexkeywords.ts","./src/validation/dataflexvalidator.ts"],"version":"5.9.2"}
+{"root":["./src/server.ts","./src/definitions/definitionfinder.ts","./src/symbols/symbolindexbuilder.ts","./src/symbols/dataflexsymbols.ts","./src/codeactions/dataflexcodeactions.ts","./src/common/dataflexkeywords.ts","./src/common/dataflexscopes.ts","./src/common/dataflexvariables.ts","./src/validation/dataflexvalidator.ts"],"version":"5.9.2"}

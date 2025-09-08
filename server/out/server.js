@@ -4,6 +4,10 @@ const node_1 = require("vscode-languageserver/node");
 const vscode_languageserver_textdocument_1 = require("vscode-languageserver-textdocument");
 const DataflexCodeActions_1 = require("./codeActions/DataflexCodeActions");
 const DataFlexValidator_1 = require("./validation/DataFlexValidator");
+const SymbolIndexBuilder_1 = require("./Symbols/SymbolIndexBuilder");
+const DefinitionFinder_1 = require("./Definitions/DefinitionFinder");
+const symbolIndex = new SymbolIndexBuilder_1.SymbolIndexBuilder(); // updates symbol index, finds definitions
+const definitionFinder = new DefinitionFinder_1.DefinitionFinder(); // finds definitions
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 let connection = (0, node_1.createConnection)(node_1.ProposedFeatures.all);
@@ -30,7 +34,8 @@ connection.onInitialize((params) => {
                 resolveProvider: true
             },
             // the client that this server supports code actions
-            codeActionProvider: true
+            codeActionProvider: true,
+            definitionProvider: true // 2025-09-05 Event Handler: onDefinition 
         }
     };
     if (hasWorkspaceFolderCapability) {
@@ -101,6 +106,7 @@ connection.onCodeAction((params) => {
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(async (change) => {
     validateTextDocument(change.document);
+    SymbolIndexBuilder_1.SymbolIndexBuilder.indexDocument(change.document); // Update symbol index on document change
 });
 async function validateTextDocument(textDocument) {
     // In this simple example we get the settings for every validate run.
@@ -146,6 +152,40 @@ connection.onCompletionResolve((item) => {
     }
     return item;
 });
+//Definition Handler for Go to Definition Support. Currently not implemented, First step is current document
+connection.onDefinition((params) => {
+    const document = documents.get(params.textDocument.uri);
+    if (!document) {
+        return [];
+    }
+    const position = params.position;
+    const word = getWordAtPosition(document, position);
+    if (!word) {
+        return [];
+    }
+    return definitionFinder.findDefinitions(word, position, params.textDocument.uri);
+});
+// Helper function to get the word range at a given position
+// Helper function to get word at position
+function getWordRangeAtPosition(document, position) {
+    const line = document.getText().split(/\r?\n/)[position.line];
+    const wordRegex = /\b\w+\b/g;
+    let match;
+    while ((match = wordRegex.exec(line)) !== null) {
+        if (match.index <= position.character &&
+            position.character <= match.index + match[0].length) {
+            return {
+                start: { line: position.line, character: match.index },
+                end: { line: position.line, character: match.index + match[0].length }
+            };
+        }
+    }
+    return { start: position, end: position };
+}
+function getWordAtPosition(document, position) {
+    const wordRange = getWordRangeAtPosition(document, position);
+    return document.getText(wordRange) || null;
+}
 // Make the text document manager listen on the connection
 // for open, change and close text document events
 documents.listen(connection);
