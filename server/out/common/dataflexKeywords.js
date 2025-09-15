@@ -30,8 +30,8 @@ exports.DATAFLEX_KEYWORDS = {
     end_object: { correctCasing: 'End_Object', firstWordOnly: true },
     //Properties
     property: { correctCasing: 'Property', firstWordOnly: true },
-    set: { correctCasing: 'Set', firstWordOnly: false },
-    get: { correctCasing: 'Get', firstWordOnly: false },
+    set: { correctCasing: 'Set', firstWordOnly: true },
+    get: { correctCasing: 'Get', firstWordOnly: true },
     //Conditionals and Loops
     if: { correctCasing: 'If', firstWordOnly: true },
     else: { correctCasing: 'Else', firstWordOnly: true },

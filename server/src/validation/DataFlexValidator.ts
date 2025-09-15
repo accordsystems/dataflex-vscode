@@ -28,7 +28,8 @@ export class DataFlexValidator {
                 regex.lastIndex = 0;
                 let match: RegExpExecArray | null;
                 while ((match = regex.exec(lineText)) !== null && match[0].trim() !== casedKeyword) {
-                    const start = { line: lineNumber, character: match.index };
+                    const keywordStartOffset = match[0].search(/\S/); // Find first non-whitespace character
+                    const start = { line: lineNumber, character: match.index + keywordStartOffset };
                     const end = { line: lineNumber, character: match.index + match[0].length };
                     diagnostics.push({
                         severity: DiagnosticSeverity.Warning,
