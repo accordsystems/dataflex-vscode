@@ -22,7 +22,8 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -b",
     "watch": "tsc -b -w",
-    "postinstall": "cd client && npm install && cd ../server && npm install && cd .."
+    "postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
+    "package": "vsce package"
   },
   "contributes": {
     "configuration": {
@@ -103,4 +104,5 @@
     "@types/node": "^22.18.0",
     "typescript": "^5.9.2"
   }
+  
 }

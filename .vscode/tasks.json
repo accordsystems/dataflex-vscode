@@ -21,6 +21,12 @@
 			"label": "npm: watch",
 			"detail": "tsc -b -w"
 		},
-		
+		{
+		"label": "npm: package",
+		"type": "npm",
+		"script": "package",
+		"group": "build",
+		"detail": "vsce package"
+		}		
 	]
 }
