@@ -28,11 +28,11 @@
 		"keywords": {
 			"patterns": [
 				{
-					"match": "\\s*(Procedure|End_Procedure|Procedure_Return|Function|End_Function|Function_Return|Begin|End|#COMMAND|#END_COMMAND)\\b",
+					"match": "^\\s*(Procedure|End_Procedure|Procedure_Return|Function|End_Function|Function_Return|Begin|End|#COMMAND|#END_COMMAND)\\b",
 					"name": "keyword.control.dataflex"
 				},
 				{
-					"match": "^\\s*(Use|#INCLUDE|#IFDEF|#ENDIF|#ELSEIF|#IFNDEF|#REM)\\b",
+					"match": "^\\s*(Use|#INCLUDE|#IFDEF|#ENDIF|#ELSEIF|#IFNDEF|#REM|#ELSE|Import_Class_Protocol)\\b",
 					"name": "keyword.control.directive.dataflex"
 				},
 				{
@@ -40,27 +40,35 @@
 					"name": "keyword.control.return.dataflex"
 				},
 				{
-					"match": "\\s*(Global_Variable|Define|Object|End_Object|Class|End_Class|Struct|End_Struct)\\b",
+					"match": "^\\s*(Global_Variable|Define|Object|End_Object|Class|End_Class|Struct|End_Struct)\\b",
 					"name": "keyword.declaration.dataflex"
 				},
 				{
-					"match": "\\b(Handle|String|Number|Integer|Date|DateTime|Property|Local)\\b",
+					"match": "\\b(Boolean|Handle|String|Number|Integer|Date|DateTime|Property|Local)\\b",
 					"name": "keyword.declaration.dataflex"
 				},
 				{
-					"match": "\\s*(For|Loop|While|Until|Repeat)\\b",
+					"match": "^\\s*(For|Loop|While|Until|Repeat)\\b",
 					"name": "keyword.control.loop.dataflex"
 				},
 				{
-					"match": "\\s*(Begin|End|If|Else|Else If|Case|Case Break)\\b",
+					"match": "^\\s*(End|If|Else|Else If|Case|Case Break)\\b",
 					"name": "keyword.control.conditional.dataflex"
 				},
 				{
-					"match": "\\s*(End|Case End)\\b",
+					"match": "\\s*(Begin)\\b",
+					"name": "keyword.control.conditional.dataflex"
+				},
+				{
+					"match": "^\\s*(End|Case End)\\b",
 					"name": "keyword.control.end.dataflex"
 				},
 				{
 					"match": "\\s*(Move|Get|Set|Send)\\b",
+					"name": "keyword.access.dataflex"
+				},
+				{
+					"match": "^\\s*(Forward)\\b",
 					"name": "keyword.access.dataflex"
 				},
 				{
