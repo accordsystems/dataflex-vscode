@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { execFile } from 'child_process';
 
 export function activate(context: vscode.ExtensionContext){
     const command = 'dataflex.compileConsoleMode';
@@ -21,15 +20,17 @@ export function activate(context: vscode.ExtensionContext){
             return;
         }
 
-        execFile('pwsh.exe', ['-File', scriptPath, fileName], (error, stdout, stderr) => {
-            if (error) {
-                console.error('Error executing script:', error);
-                vscode.window.showErrorMessage('Error executing script: ' + error.message);
-                return;
-            }
-            console.log('Script output:', stdout);
-            vscode.window.showInformationMessage('Script executed successfully');
-        });
+        // Create or reuse terminal for compilation
+        const terminalName = 'DataFlex Compile';
+        let terminal = vscode.window.terminals.find(t => t.name === terminalName);
+
+        if (!terminal) {
+            terminal = vscode.window.createTerminal(terminalName);
+        }
+
+        // Show the terminal and execute the command
+        terminal.show();
+        terminal.sendText(`pwsh.exe -File "${scriptPath}" "${fileName}"`);
     }
     context.subscriptions.push(vscode.commands.registerCommand(command, commandHandler));
 }

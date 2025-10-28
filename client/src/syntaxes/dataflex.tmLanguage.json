@@ -44,6 +44,10 @@
 					"name": "keyword.declaration.dataflex"
 				},
 				{
+					"match": "\\s*(is|a|an|of)\\b",
+					"name": "keyword.declaration.dataflex"
+				},
+				{
 					"match": "\\b(Boolean|Handle|String|Number|Integer|Date|DateTime|Property|Local)\\b",
 					"name": "keyword.declaration.dataflex"
 				},
