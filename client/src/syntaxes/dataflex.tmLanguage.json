@@ -56,7 +56,7 @@
 					"name": "keyword.control.loop.dataflex"
 				},
 				{
-					"match": "^\\s*(End|If|Else|Else If|Case|Case Break)\\b",
+					"match": "^\\s*(End|If|Else If|Else|Case Break|Case)\\b",
 					"name": "keyword.control.conditional.dataflex"
 				},
 				{

@@ -35,6 +35,7 @@ export const DATAFLEX_KEYWORDS: { [key: string]: KeywordConfig } = {
     //Conditionals and Loops
     if: { correctCasing: 'If', firstWordOnly: true },
     else: { correctCasing: 'Else', firstWordOnly: true },
+    elseif: { correctCasing: 'Else If', firstWordOnly: true },
     while: { correctCasing: 'While', firstWordOnly: true },
     loop: { correctCasing: 'Loop', firstWordOnly: true },
     for: { correctCasing: 'For', firstWordOnly: true },
