@@ -44,7 +44,7 @@
 					"name": "keyword.declaration.dataflex"
 				},
 				{
-					"match": "\\s*(is|a|an|of)\\b",
+					"match": "\\b(is|a|an|of)\\b",
 					"name": "keyword.declaration.dataflex"
 				},
 				{
