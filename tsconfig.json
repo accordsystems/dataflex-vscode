@@ -1,6 +1,12 @@
 {
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
+		"strict": true,                    // already have
+		"noUncheckedIndexedAccess": true,  // array[i] returns T | undefined, not just T
+		"noImplicitOverride": true,        // must use 'override' keyword when overriding class methods
+		"noFallthroughCasesInSwitch": true, // catch missing 'break' in switch statements
+		"forceConsistentCasingInFileNames": true, // prevents issues on case-insensitive filesystems
+		"exactOptionalPropertyTypes": true, // { x?: string } means string, not string | undefined
 		"module": "commonjs",
 		"target": "ES2024",
 		"lib": [

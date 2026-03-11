@@ -32,6 +32,11 @@ const definitionFinder = new DefinitionFinder(); // finds definitions
 // Also include all preview / proposed LSP features.
 let connection = createConnection(ProposedFeatures.all);
 
+// Redirect console to LSP connection so all console.log/warn/error calls appear in the client output
+console.log = (msg: string) => connection.console.log(msg);
+console.warn = (msg: string) => connection.console.warn(msg);
+console.error = (msg: string) => connection.console.error(msg);
+
 // Create a simple text document manager.
 let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
