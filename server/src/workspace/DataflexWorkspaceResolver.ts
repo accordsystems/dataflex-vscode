@@ -93,7 +93,7 @@ static parseIni(iniFullText: string): Record<string, Record<string, string>> {
 
     // Split text into lines, supporting both \n and \r\n
     const lines = iniFullText.split(/\r?\n/);
-    console.log(`[parseIni] parsing ${lines.length} lines`);
+    //console.log(`[parseIni] parsing ${lines.length} lines`);
 
     for (const line of lines) {
         lineNum++;
@@ -114,7 +114,7 @@ static parseIni(iniFullText: string): Record<string, Record<string, string>> {
         if (isSection){
             currentSection = trimmedLine.slice(1, -1).toLowerCase().trim();
             result[currentSection] ??= {};
-            console.log(`[parseIni] line ${lineNum}: section="${currentSection}"`);
+            //console.log(`[parseIni] line ${lineNum}: section="${currentSection}"`);
         }
 
         if (isKeyValuePair){
@@ -124,10 +124,10 @@ static parseIni(iniFullText: string): Record<string, Record<string, string>> {
             const value = trimmedLine.slice(kvpSeparatorIndex + 1).trim();
             const section = (result[currentSection] ??= {});
             section[key] = value;
-            console.log(`[parseIni] line ${lineNum}: [${currentSection}] ${key}="${value}"`);
+            //console.log(`[parseIni] line ${lineNum}: [${currentSection}] ${key}="${value}"`);
         }
     }
-    console.log(`[parseIni] done, ${Object.keys(result).length} sections`);
+    //console.log(`[parseIni] done, ${Object.keys(result).length} sections`);
     return result;
 }
 
