@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SymbolIndexBuilder = void 0;
+//import { Position, Location } from 'vscode-languageserver/node';
 const dataflexScopes_1 = require("../common/dataflexScopes");
 class SymbolIndexBuilder {
     // Index the symbols in a document and update the symbol index
@@ -11,7 +12,8 @@ class SymbolIndexBuilder {
         const symbols = this.buildSymbolIndex(lines, documentUri, scopes);
         return { documentUri, symbols, scopes };
     }
-    static buildSymbolIndex(lines, documentUri, scopes) {
+    // Placeholder for symbol extraction logic. For now, it returns an empty array.
+    static buildSymbolIndex(_lines, _documentUri, _scopes) {
         const symbols = [];
         // Placeholder for symbol extraction logic
         return symbols;
@@ -37,6 +39,8 @@ class SymbolIndexBuilder {
                 const match = trimmedLine.match(regex);
                 if (match) {
                     const symbolName = match[1]; // Extracted symbol name
+                    if (!symbolName)
+                        continue; //guard, should always be true due to regex but just in case
                     const newScope = {
                         name: symbolName,
                         type: symbolType,
@@ -51,7 +55,7 @@ class SymbolIndexBuilder {
                 }
             }
             //Check for scope ending symbols; if found, pop from stack and add end line#
-            for (const [endSymbolType, endSymbolKeyword] of Object.entries(dataflexScopes_1.DATAFLEX_SCOPE_END_SYMBOLS)) {
+            for (const [_endSymbolType, endSymbolKeyword] of Object.entries(dataflexScopes_1.DATAFLEX_SCOPE_END_SYMBOLS)) {
                 if (trimmedLine.startsWith(endSymbolKeyword)) {
                     const currentScope = scopeStack.pop();
                     if (currentScope) {

@@ -6,26 +6,34 @@ const DataflexCodeActions_1 = require("./codeActions/DataflexCodeActions");
 const DataFlexValidator_1 = require("./validation/DataFlexValidator");
 const SymbolIndexBuilder_1 = require("./Symbols/SymbolIndexBuilder");
 const DefinitionFinder_1 = require("./Definitions/DefinitionFinder");
-const symbolIndex = new SymbolIndexBuilder_1.SymbolIndexBuilder(); // updates symbol index, finds definitions
+//not yet implemented
+//const symbolIndex = new SymbolIndexBuilder(); // updates symbol index, finds definitions
 const definitionFinder = new DefinitionFinder_1.DefinitionFinder(); // finds definitions
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 let connection = (0, node_1.createConnection)(node_1.ProposedFeatures.all);
+// Redirect console to LSP connection so all console.log/warn/error calls appear in the client output
+console.log = (msg) => connection.console.log(msg);
+console.warn = (msg) => connection.console.warn(msg);
+console.error = (msg) => connection.console.error(msg);
 // Create a simple text document manager.
 let documents = new node_1.TextDocuments(vscode_languageserver_textdocument_1.TextDocument);
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
-let hasDiagnosticRelatedInformationCapability = false;
-let hasAutoCorrectCapability = false;
+//not Implemented.
+//let hasDiagnosticRelatedInformationCapability: boolean = false;
+//let hasAutoCorrectCapability: boolean = false;
 connection.onInitialize((params) => {
     let capabilities = params.capabilities;
     // Does the client support the `workspace/configuration` request?
     // If not, we fall back using global settings.
     hasConfigurationCapability = !!(capabilities.workspace && !!capabilities.workspace.configuration);
     hasWorkspaceFolderCapability = !!(capabilities.workspace && !!capabilities.workspace.workspaceFolders);
-    hasDiagnosticRelatedInformationCapability = !!(capabilities.textDocument &&
-        capabilities.textDocument.publishDiagnostics &&
-        capabilities.textDocument.publishDiagnostics.relatedInformation);
+    //hasDiagnosticRelatedInformationCapability = !!(
+    //  capabilities.textDocument &&
+    //  capabilities.textDocument.publishDiagnostics &&
+    //  capabilities.textDocument.publishDiagnostics.relatedInformation
+    //);
     const result = {
         capabilities: {
             textDocumentSync: node_1.TextDocumentSyncKind.Incremental,
@@ -61,35 +69,38 @@ connection.onInitialized(() => {
 // The global settings, used when the `workspace/configuration` request is not supported by the client.
 // Please note that this is not the case when using this server with the client provided in this example
 // but could happen with other clients.
-const defaultSettings = { maxNumberOfProblems: 1000 };
-let globalSettings = defaultSettings;
+//Not yet implemented
+//const defaultSettings: ExampleSettings = { maxNumberOfProblems: 1000 };
+//let globalSettings: ExampleSettings = defaultSettings;
 // Cache the settings of all open documents
 let documentSettings = new Map();
-connection.onDidChangeConfiguration(change => {
-    if (hasConfigurationCapability) {
-        // Reset all cached document settings
-        documentSettings.clear();
-    }
-    else {
-        globalSettings = ((change.settings.languageServerExample || defaultSettings));
-    }
-    // Revalidate all open text documents
-    documents.all().forEach(validateTextDocument);
-});
-function getDocumentSettings(resource) {
-    if (!hasConfigurationCapability) {
-        return Promise.resolve(globalSettings);
-    }
-    let result = documentSettings.get(resource);
-    if (!result) {
-        result = connection.workspace.getConfiguration({
-            scopeUri: resource,
-            section: 'dataflex.languageServer'
-        });
-        documentSettings.set(resource, result);
-    }
-    return result;
-}
+// connection.onDidChangeConfiguration(change => {
+//   if (hasConfigurationCapability) {
+//     // Reset all cached document settings
+//     documentSettings.clear();
+//   } else {
+//     globalSettings = <ExampleSettings>(
+//       (change.settings.languageServerExample || defaultSettings)
+//     );
+//   }
+//     // Revalidate all open text documents
+//   documents.all().forEach(validateTextDocument);
+// });
+// Not yet implemented, but this is where we would handle file changes that are relevant to the workspace, such as .sws or config files, and trigger a workspace re-resolution and re-validation of all documents if needed
+// function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
+//   if (!hasConfigurationCapability) {
+//     return Promise.resolve(globalSettings);
+//   }
+//   let result = documentSettings.get(resource);
+//   if (!result) {
+//     result = connection.workspace.getConfiguration({
+//       scopeUri: resource,
+//       section: 'dataflex.languageServer'
+//     });
+//     documentSettings.set(resource, result);
+//   }
+//   return result;
+// }
 // Only keep settings for open documents
 documents.onDidClose(e => {
     documentSettings.delete(e.document.uri);
@@ -169,6 +180,9 @@ connection.onDefinition((params) => {
 // Helper function to get word at position
 function getWordRangeAtPosition(document, position) {
     const line = document.getText().split(/\r?\n/)[position.line];
+    //guard
+    if (!line)
+        return { start: position, end: position };
     const wordRegex = /\b\w+\b/g;
     let match;
     while ((match = wordRegex.exec(line)) !== null) {

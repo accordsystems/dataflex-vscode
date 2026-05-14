@@ -48,7 +48,7 @@ exports.DATAFLEX_KEYWORDS = {
 exports.CASED_KEYWORDS = Object.values(exports.DATAFLEX_KEYWORDS).map(config => config.correctCasing);
 //Function to get all regexes for keywords
 function getAllKeywordRegexes() {
-    return Object.entries(exports.DATAFLEX_KEYWORDS).map(([keyword, config]) => [
+    return Object.entries(exports.DATAFLEX_KEYWORDS).map(([_keyword, config]) => [
         config.correctCasing, // Return the correctCasing instead of the key
         createCaseSensitiveKeywordRegex(config)
     ]);

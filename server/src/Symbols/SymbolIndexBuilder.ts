@@ -1,5 +1,5 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { Position, Location } from 'vscode-languageserver/node';
+//import { Position, Location } from 'vscode-languageserver/node';
 import { DATAFLEX_SCOPE_BEGIN_SYMBOLS, 
     DATAFLEX_SCOPE_END_SYMBOLS, 
     DATAFLEX_SCOPE_TYPES, 
@@ -24,7 +24,8 @@ export class SymbolIndexBuilder {
         return { documentUri, symbols, scopes };
     }    
 
-    private static buildSymbolIndex(lines: string[], documentUri: string, scopes: ScopeInfo[]): SymbolDefinition[] {
+    // Placeholder for symbol extraction logic. For now, it returns an empty array.
+    private static buildSymbolIndex(_lines: string[], _documentUri: string, _scopes: ScopeInfo[]): SymbolDefinition[] {
         const symbols: SymbolDefinition[] = [];
         // Placeholder for symbol extraction logic
         return symbols;
@@ -51,8 +52,9 @@ export class SymbolIndexBuilder {
             for (const [symbolType, symbolKeyword] of Object.entries(DATAFLEX_SCOPE_BEGIN_SYMBOLS)) {
                 const regex = new RegExp(`^\\s*${symbolKeyword}\\s+(\\w+)`, 'i');
                 const match = trimmedLine.match(regex);
-                if (match) {
+                if (match) {                    
                     const symbolName = match[1]; // Extracted symbol name
+                    if (!symbolName) continue; //guard, should always be true due to regex but just in case
                     const newScope: ScopeInfo = {
                         name: symbolName,
                         type: symbolType as keyof typeof DATAFLEX_SCOPE_TYPES,
@@ -67,7 +69,7 @@ export class SymbolIndexBuilder {
                 }
             }
             //Check for scope ending symbols; if found, pop from stack and add end line#
-            for (const [endSymbolType, endSymbolKeyword] of Object.entries(DATAFLEX_SCOPE_END_SYMBOLS)) {
+            for (const [_endSymbolType, endSymbolKeyword] of Object.entries(DATAFLEX_SCOPE_END_SYMBOLS)) {
                 if (trimmedLine.startsWith(endSymbolKeyword)) {
                     const currentScope = scopeStack.pop();
                     if (currentScope) {
