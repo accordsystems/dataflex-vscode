@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 export type SourceKind = 'appSrc' | 'ddSrc';
 
 export interface ResolvedSourceDir {
@@ -92,7 +94,8 @@ static parseIni(iniFullText: string): Record<string, Record<string, string>> {
             const kvpSeparatorIndex = trimmedLine.indexOf('=');
             const key = trimmedLine.slice(0,kvpSeparatorIndex).trim().toLowerCase();
             const value = trimmedLine.slice(kvpSeparatorIndex + 1).trim();
-            result[currentSection][key] = value;
+            const section = (result[currentSection] ??= {});
+            section[key] = value;
             console.log(`[parseIni] line ${lineNum}: [${currentSection}] ${key}="${value}"`);
         }
     }
@@ -100,21 +103,27 @@ static parseIni(iniFullText: string): Record<string, Record<string, string>> {
     return result;
 }
 
-private static resolvePath(baseDir: string, relativePath: string): string {
-
+//non-private for testing
+static resolvePath(baseDir: string, relativePath: string): string {
+    if (relativePath.trim() === '') {
+        throw new Error(`Invalid path: "${relativePath}". Path cannot be empty or whitespace.`);
+    }
+    //normalize in case this is somehow run from linux
+    const normalizedRelativePath = relativePath.replaceAll('\\', path.sep).replaceAll('/', path.sep);
+    return path.resolve(baseDir, normalizedRelativePath);
 }
 
-// Parses the .sws file and returns the relevant information for workspace resolution
-static parseSws(swsPath: string): ParsedSws {
-    // Check for File existence and throw if not found
-    // Read in File Contect
-    // Parse File Content
-    // Check for Required Sections. [Properties], [WorkspacePaths], [Projects]
-    // Fill in Sections into ParsedSws Object and return
-}
+// // Parses the .sws file and returns the relevant information for workspace resolution
+// static parseSws(swsPath: string): ParsedSws {
+//     // Check for File existence and throw if not found
+//     // Read in File Contect
+//     // Parse File Content
+//     // Check for Required Sections. [Properties], [WorkspacePaths], [Projects]
+//     // Fill in Sections into ParsedSws Object and return
+// }
 
-static parseConfigWs(configPath: string): ParsedConfigWs {}
+// static parseConfigWs(configPath: string): ParsedConfigWs {}
 
-static resolveWorkspace(swsPath: string): ResolvedWorkspace {}
+// static resolveWorkspace(swsPath: string): ResolvedWorkspace {}
 
 }
