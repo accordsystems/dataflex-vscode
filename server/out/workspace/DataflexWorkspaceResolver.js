@@ -63,7 +63,7 @@ class DataflexWorkspaceResolver {
         let lineNum = 0;
         // Split text into lines, supporting both \n and \r\n
         const lines = iniFullText.split(/\r?\n/);
-        console.log(`[parseIni] parsing ${lines.length} lines`);
+        //console.log(`[parseIni] parsing ${lines.length} lines`);
         for (const line of lines) {
             lineNum++;
             const trimmedLine = line.trim();
@@ -80,7 +80,7 @@ class DataflexWorkspaceResolver {
             if (isSection) {
                 currentSection = trimmedLine.slice(1, -1).toLowerCase().trim();
                 result[currentSection] ??= {};
-                console.log(`[parseIni] line ${lineNum}: section="${currentSection}"`);
+                //console.log(`[parseIni] line ${lineNum}: section="${currentSection}"`);
             }
             if (isKeyValuePair) {
                 if (currentSection === '')
@@ -90,10 +90,10 @@ class DataflexWorkspaceResolver {
                 const value = trimmedLine.slice(kvpSeparatorIndex + 1).trim();
                 const section = (result[currentSection] ??= {});
                 section[key] = value;
-                console.log(`[parseIni] line ${lineNum}: [${currentSection}] ${key}="${value}"`);
+                //console.log(`[parseIni] line ${lineNum}: [${currentSection}] ${key}="${value}"`);
             }
         }
-        console.log(`[parseIni] done, ${Object.keys(result).length} sections`);
+        //console.log(`[parseIni] done, ${Object.keys(result).length} sections`);
         return result;
     }
     //non-private for testing
@@ -193,14 +193,52 @@ class DataflexWorkspaceResolver {
             }
         }
     }
-    // Read a .sws file from disk, parse the INI, pull out the fields the resolver needs, resolve internal path references against the SWS file's own directory. Output:
-    // {
-    //     swsPath, swsDir, version,
-    //     projectFileNames,        // relative .src paths from [Projects], source order
-    //     conditionals,            // [Conditionals] section as-is
-    //     configFilePath,          // absolute, resolved against swsDir
-    //     librarySwsPaths,         // absolute, resolved against swsDir, source order
-    // }
+    /**
+     * Parses a .sws file from disk and extracts the relevant fields for the resolver.
+     * @param swsPath The file path to the .sws file to be parsed.
+     * @returns {ParsedSws} An object containing the parsed fields from the .sws file, including:
+    * - `swsPath`: The original file path of the .sws file.
+    * - `swsDir`: The directory containing the .sws file.
+    * - `version`: The version of the workspace as specified in the .sws file.
+    * - `projectFileNames`: An array of project file names (relative paths) specified in the .sws file.
+    * - `conditionals`: An object containing the conditional compilation symbols defined in the .sws file.
+    * - `configFilePath`: The resolved absolute path to the Config.ws file specified in the .sws file.
+    * - `librarySwsPaths`: An array of resolved absolute paths to library .sws files specified in the .sws file.
+    * @throws Error if the .sws file is missing, cannot be read, or contains invalid content (e.g., missing required sections or keys, invalid paths).
+    * @example
+    * Given a .sws file with the following content:
+    * ```ini
+    * [Properties]
+    * Version=19.1
+    * [WorkspacePaths]
+    * ConfigFile=.\Programs\Config.ws
+    * [Conditionals]
+    * Is$WebApp=True
+    * [Libraries]
+    * Lib2=libs\libi20\asgI20-191.sws
+    * Lib1=libs\DataFlex DateTime Library 24.0\DateTime - 191.sws
+    * Lib3=libs\DataFlex Conversions Library 24.0\Conversions - 191.sws
+    * [Projects]
+    * Project0=WebApp.src
+    * Project1=CarmTests.src
+    * ```
+    * The `parseSws` function will return an object with the following structure:
+    * ```typescript
+    * {
+    *   swsPath: 'path/to/workspace.sws',
+    *   swsDir: 'path/to',
+    *  version: '19.1',
+    *  projectFileNames: ['WebApp.src', 'CarmTests.src'],
+    * conditionals: { Is$WebApp: 'True' },
+    * configFilePath: 'path/to/Programs/Config.ws',
+    * librarySwsPaths: [
+    *   'path/to/libs/libi20/asgI20-191.sws',
+    *  'path/to/libs/DataFlex DateTime Library 24.0/DateTime - 191.sws',
+    * 'path/to/libs/DataFlex Conversions Library 24.0/Conversions - 191.sws'
+    * ]
+    * }
+    * ```
+    */
     static parseSws(swsPath) {
         // Check for File existence and throw if not found
         const resolvedPath = path.resolve(swsPath); //will throw if invalid path, but not if file doesn't exist. We'll check that separately       
@@ -235,6 +273,60 @@ class DataflexWorkspaceResolver {
             configFilePath: configFilePath,
             librarySwsPaths: librarySwsPaths ?? []
         };
+    }
+    /**
+     * Parses the UTF-8 content of a Config.ws file and extracts the relevant fields for the resolver.
+     *
+     * @param configContent
+     * @returns {ParsedConfigWs} An object containing the parsed fields from the Config.ws file, including:
+     * - `homeDir`: The Home directory specified in the Config.ws file.
+     * - `appSrcDirs`: An array of application source directories specified in the Config.ws file.
+     * - `ddSrcDirs`: An array of DD source directories specified in the Config.ws file.
+     * - `dataDirs`: An array of data directories specified in the Config.ws file.
+     * - `filelistPath`: The path to the file list specified in the Config.ws file.
+     * @throws Error if required fields are missing or invalid in the config content.
+     * @example
+     * ```ini
+     * [Workspace]
+        Home=..\
+        AppSrcPath=.\AppSrc
+        AppHTMLPath=.\AppHtml
+        BitmapPath=.\Bitmaps
+        IdeSrcPath=.\IdeSrc
+        DDSrcPath=.\DDSrc;.\Libs\Lib002\DDSrc;.\Libs\Lib001\DdSrc;
+        HelpPath=.\Help
+        ProgramPath=.\Programs
+        Description=Example Config.ws file
+        DataPath=D:\some\data\path
+        FileList=D:\some\data\path\filelist.cfg
+     * ```
+    */
+    static parseConfigWsContent(configContent) {
+        // dummy read for compiler
+        var configContentDummy = configContent;
+        configContentDummy += '';
+        // For now, just return dummy data. We'll fill this in later when we implement config.ws parsing.
+        return {
+            configPath: 'dummyConfigPath',
+            homeDir: 'dummyHomeDir',
+            appSrcDirs: ['dummyAppSrcDir1', 'dummyAppSrcDir2'],
+            ddSrcDirs: ['dummyDdSrcDir1', 'dummyDdSrcDir2'],
+            dataDirs: ['dummyDataDir1', 'dummyDataDir2'],
+            filelistPath: 'dummyFilelistPath'
+        };
+    }
+    /**
+     *
+     * @param iniFullText
+     * @returns Record<string, Record<string, string>>
+     *
+     * Rules:
+     *
+     */
+    static parseConfigWs(configPath) {
+        //return dummy for now
+        const configContent = fs.readFileSync(configPath, 'utf-8');
+        return this.parseConfigWsContent(configContent);
     }
 }
 exports.DataflexWorkspaceResolver = DataflexWorkspaceResolver;
