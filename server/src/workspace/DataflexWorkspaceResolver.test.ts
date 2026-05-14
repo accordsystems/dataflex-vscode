@@ -74,36 +74,36 @@ describe('DataflexWorkspaceResolver', () => {
         const norm = (p: string) => p.replace(/\\/g, '/');
 
         it('resolves a relative path with backslashes', () => {
-            const result = DataflexWorkspaceResolver.resolvePath('C:/a/b', '.\\sub\\file');
+            const result = DataflexWorkspaceResolver.resolveRelativePath('C:/a/b', '.\\sub\\file');
             assert.equal(norm(result), 'C:/a/b/sub/file');
         });
 
         it('resolves a relative path with forward slashes', () => {
-            const result = DataflexWorkspaceResolver.resolvePath('C:/a/b', './sub/file');
+            const result = DataflexWorkspaceResolver.resolveRelativePath('C:/a/b', './sub/file');
             assert.equal(norm(result), 'C:/a/b/sub/file');
         });
 
         it('resolves a relative path with mixed separators', () => {
-            const result = DataflexWorkspaceResolver.resolvePath('C:/a/b', '.\\sub/file');
+            const result = DataflexWorkspaceResolver.resolveRelativePath('C:/a/b', '.\\sub/file');
             assert.equal(norm(result), 'C:/a/b/sub/file');
         });
 
         it('collapses .. segments', () => {
-            const result = DataflexWorkspaceResolver.resolvePath('C:/a/b', '..\\c');
+            const result = DataflexWorkspaceResolver.resolveRelativePath('C:/a/b', '..\\c');
             assert.equal(norm(result), 'C:/a/c');
         });
 
         it('collapses repeated . segments', () => {
-            const result = DataflexWorkspaceResolver.resolvePath('C:/a/b', '.\\.\\.\\file');
+            const result = DataflexWorkspaceResolver.resolveRelativePath('C:/a/b', '.\\.\\.\\file');
             assert.equal(norm(result), 'C:/a/b/file');
         });
 
         it('throws on empty relativePath', () => {
-            assert.throws(() => DataflexWorkspaceResolver.resolvePath('C:/a', ''));
+            assert.throws(() => DataflexWorkspaceResolver.resolveRelativePath('C:/a', ''));
         });
 
         it('throws on whitespace-only relativePath', () => {
-            assert.throws(() => DataflexWorkspaceResolver.resolvePath('C:/a', '   '));
+            assert.throws(() => DataflexWorkspaceResolver.resolveRelativePath('C:/a', '   '));
         });
 
         // Drive-letter absoluteness is recognized by path.win32 but not path.posix,
@@ -111,7 +111,7 @@ describe('DataflexWorkspaceResolver', () => {
         // visible in the report on other platforms instead of silently dropping it.
         const onWindows = process.platform === 'win32';
         (onWindows ? it : it.skip)('returns an absolute Windows path unchanged (ignores baseDir)', () => {
-            const result = DataflexWorkspaceResolver.resolvePath('C:/a/b', 'D:\\env\\dat');
+            const result = DataflexWorkspaceResolver.resolveRelativePath('C:/a/b', 'D:\\env\\dat');
             assert.equal(norm(result), 'D:/env/dat');
         });
     });

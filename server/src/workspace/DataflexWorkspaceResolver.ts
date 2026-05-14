@@ -1,12 +1,39 @@
 import * as path from 'path';
+import * as fs from 'fs';
 
 export type SourceKind = 'appSrc' | 'ddSrc';
+
+//Example Ini File
+// [Properties]
+// Version=19.1
+// [WorkspacePaths]
+// ConfigFile=.\Programs\Config.ws
+// [Preferences]
+// DefaultFormHeight=12
+// [Conditionals]
+// Is$WebApp=True
+// [Libraries]
+// Lib2=libs\libi20\asgI20-191.sws
+// Lib1=libs\DataFlex DateTime Library 24.0\DateTime - 191.sws
+// Lib3=libs\DataFlex Conversions Library 24.0\Conversions - 191.sws
+// [Projects]
+// Project0=WebApp.src
+// Project1=CarmTests.src
+
 
 export interface ResolvedSourceDir {
     absolutePath: string;
     kind: SourceKind;
     swsOrigin: string; //Absolute path of the direct sws that contributed this path
     depth: number; // 0 = main workspace, 1 = direct library, etc.
+}
+
+
+interface ValidatedSwsIni extends Record<string, Record<string, string>> {
+    properties:     { version: string }    & Record<string, string>;    
+    workspacepaths: { configfile: string } & Record<string, string>;
+    projects: { } & Record<string,string>;
+    // include other guaranteed keys here
 }
 
 export interface ParsedSws {
@@ -16,7 +43,7 @@ export interface ParsedSws {
     projectFileNames : string[]; //relative paths of .src files
     conditionals : Record<string, string>;
     configFilePath: string;
-    librarySwsPaths: string[]; //sorted Lib1, Lib2, etc.    
+    librarySwsPaths: string[]; 
 }
 
 export interface ParsedConfigWs {
@@ -45,18 +72,19 @@ class ParseError extends Error {
 }
 
 export class DataflexWorkspaceResolver{
-// Section Name -> Key -> Value
-// Line Starts: ; and # are comments, ignore. ; is valid within a line to separate multiple values. No sense in parsing these here
-// Skip Empty Lines
-// [SectionName] Starts a new section, section name is the text within the brackets. Trim whitespace. Case insensitive
-// Key=Value pairs. 
-//  Trim whitespace around key and value. 
-//  Case insensitive keys. 
-//  Value is the text after the =, can be empty. 
-//  If multiple key=value pairs exist on the same line, separated by ;, parse them all. 
-//  If the same key is defined multiple times within the same section, last one wins.
-//  the first = is the separator, so key=value=with=equals would have key "key" and value "value=with=equals"
 
+/**
+ * 
+ * @param iniFullText 
+ * @returns Record<string, Record<string, string>>
+ * 
+ * Rules:
+ * - Sections and keys are lowercased.
+ * - Comments start with `;` or `#`.
+ * - First `=` is the key/value separator; values may contain `=`.
+ * - Duplicate keys in the same section: last value wins.
+ * 
+ */
 static parseIni(iniFullText: string): Record<string, Record<string, string>> {
 
     const result: Record<string, Record<string, string>> = {};
@@ -104,7 +132,7 @@ static parseIni(iniFullText: string): Record<string, Record<string, string>> {
 }
 
 //non-private for testing
-static resolvePath(baseDir: string, relativePath: string): string {
+static resolveRelativePath(baseDir: string, relativePath: string): string {
     if (relativePath.trim() === '') {
         throw new Error(`Invalid path: "${relativePath}". Path cannot be empty or whitespace.`);
     }
@@ -113,17 +141,146 @@ static resolvePath(baseDir: string, relativePath: string): string {
     return path.resolve(baseDir, normalizedRelativePath);
 }
 
-// // Parses the .sws file and returns the relevant information for workspace resolution
-// static parseSws(swsPath: string): ParsedSws {
-//     // Check for File existence and throw if not found
-//     // Read in File Contect
-//     // Parse File Content
-//     // Check for Required Sections. [Properties], [WorkspacePaths], [Projects]
-//     // Fill in Sections into ParsedSws Object and return
+// Validate SWS File KVPs and Sections from parseSWS function. Throw if invalid. 
+// parseSWS returns everything in lowercase
+// Validation includes:
+// - Required Sections: [Properties], [WorkspacePaths], [Projects]
+// - Required KVPs: Version in [Properties], at least 1 Project in [Projects], ConfigFile in [WorkspacePaths]
+// - No duplicate project keys (Project0, Project1, etc. must be sequential with no gaps)
+// - Valid paths for ConfigFile and Projects (relative dirs are relative to swsDir, may be absolute, must exist on disk)
+// - Libraries (Optional) - If exist, do they resolve?
+//
+// Sample INI File
+// 
+// [Properties] <- Required
+// Version=19.1
+// [WorkspacePaths] <- Required
+// ConfigFile=.\Programs\Config.ws <- Required
+// [Preferences]
+// DefaultFormHeight=12
+// [Conditionals] 
+// Is$WebApp=True
+// [Libraries]
+// Lib2=libs\libi20\asgI20-191.sws
+// Lib1=libs\DataFlex DateTime Library 24.0\DateTime - 191.sws
+// Lib3=libs\DataFlex Conversions Library 24.0\Conversions - 191.sws
+// [Projects] <- Required, with at least one project
+// Project0=WebApp.src
+// Project1=CarmTests.src
+static validateParsedSws(
+    swsPath: string, 
+    parsedSws: Record<string, Record<string, string>>
+): asserts parsedSws is ValidatedSwsIni{
+    //Properties
+    const propertiesSection = parsedSws['properties'];
+    if (!propertiesSection) {
+        throw new Error('Missing required [Properties] section');
+    }
+    //Properties : Check Version
+    if (!propertiesSection['version']) {
+        throw new Error('Missing required key "Version" in [Properties] section');
+    }
+
+    //WorkspacePaths: Required: Check Section Exists, then Check ConfigFile exists, is a valid path, can be accessed.
+    const workspacePathsSection = parsedSws['workspacepaths'];
+    if (!workspacePathsSection) {
+        throw new Error('Missing required [WorkspacePaths] section');
+    }
+    // WorkspacePaths: Check ConfigFile exists and is valid path
+    if (!workspacePathsSection['configfile']) {
+        throw new Error('Missing required key "ConfigFile" in [WorkspacePaths] section');
+    }
+    if (workspacePathsSection['configfile'].trim() === '') {
+        throw new Error('Invalid "ConfigFile" path in [WorkspacePaths] section: cannot be empty or whitespace');
+    }
+    // Resolve ConfigFile path against swsDir and check existence
+    const swsDir = path.dirname(swsPath);
+    const resolvedConfigFilePath = this.resolveRelativePath(swsDir, workspacePathsSection['configfile']);
+    if (!fs.existsSync(resolvedConfigFilePath)) {
+        throw new Error(`Config file not found at path: "${resolvedConfigFilePath}"`);
+    }
+
+    //Projects: Check Section Exists. for each key, check uniqueness, valid path, existence. At least 1 project is required. 
+    const projectsSection = parsedSws['projects'];
+    if (!projectsSection) {
+        throw new Error('Missing required [Projects] section');
+    }
+    // Projects: Check for at least 1 project. name doesn't matter, but must be unique
+    const projectKeys = Object.keys(projectsSection)
+    if (projectKeys.length === 0) {
+        throw new Error('At least one project is required in [Projects] section');
+    }
+    //Projects: At least 1 project, no dupes. Check that each project file exists and is valid path
+    for (const [projectKey, projectRelativePath] of Object.entries(projectsSection)) {
+        if (projectRelativePath.trim() === '') {
+            throw new Error(`Invalid path for project "${projectKey}" in [Projects] section: cannot be empty or whitespace`);
+        }
+        const resolvedProjectPath = this.resolveRelativePath(swsDir, projectRelativePath);
+        if (!fs.existsSync(resolvedProjectPath)) {
+            throw new Error(`Project file for "${projectKey}" not found at path: "${resolvedProjectPath}"`);
+        }
+    }    
+    //Check Libraries: Keys must be unique, values must be valid paths if they exist. Libraries are optional, so 0 is valid.
+    const librariesSection = parsedSws['libraries'];
+    if (librariesSection) {                
+        for (const [libraryKey, libraryPath] of Object.entries(librariesSection)){
+            if (libraryPath.trim() === ''){
+                throw new Error(`Invalid library path for library "${libraryKey} in [Libraries] section: cannot be empty or whitespace`)
+            }
+            const resolvedLibraryPath = this.resolveRelativePath(swsDir, libraryPath)
+            if (!fs.existsSync(resolvedLibraryPath)){
+                throw new Error (`library path for "${libraryKey}" does not appear to exist at "${resolvedLibraryPath}`)
+            }            
+        }
+    }
+}
+
+// Read a .sws file from disk, parse the INI, pull out the fields the resolver needs, resolve internal path references against the SWS file's own directory. Output:
+// {
+//     swsPath, swsDir, version,
+//     projectFileNames,        // relative .src paths from [Projects], source order
+//     conditionals,            // [Conditionals] section as-is
+//     configFilePath,          // absolute, resolved against swsDir
+//     librarySwsPaths,         // absolute, resolved against swsDir, source order
 // }
 
+static parseSws(swsPath: string): ParsedSws {
+    // Check for File existence and throw if not found
+    const resolvedPath = path.resolve(swsPath); //will throw if invalid path, but not if file doesn't exist. We'll check that separately       
+    if (!fs.existsSync(resolvedPath)) {
+        throw new Error(`SWS file not found at path: "${resolvedPath}"`);
+    }
+    //get dirname
+    const swsDir = path.dirname(resolvedPath);
+    // Read in File Contect
+    const swsContent = fs.readFileSync(resolvedPath, 'utf-8');   
+    // Parse as Ini
+    const parsedSws = this.parseIni(swsContent);
+    // Validate
+    this.validateParsedSws(resolvedPath, parsedSws);    
+    // Fill in Sections into ParsedSws Object and return    
+    const version = parsedSws['properties']['version'];
+    const configFilePath = this.resolveRelativePath(swsDir, parsedSws['workspacepaths'].configfile);
+    const projectSection = parsedSws['projects'];
+    const projectFileNames = Object.values(projectSection);
+    // Optional: Conditionals, library Paths
+    const conditionalSection = parsedSws['conditionals'] ?? {} ;
+    const librariesSection = parsedSws['libraries'];    
+
+    const librarySwsPaths = librariesSection
+        ? Object.values(librariesSection).map(p => this.resolveRelativePath(swsDir, p))
+        : []   
+    
+    return {
+        swsPath: swsPath,
+        swsDir: swsDir,
+        version: version, 
+        projectFileNames: projectFileNames,
+        conditionals: conditionalSection,
+        configFilePath: configFilePath,
+        librarySwsPaths: librarySwsPaths ?? []
+    }
+}
 // static parseConfigWs(configPath: string): ParsedConfigWs {}
-
 // static resolveWorkspace(swsPath: string): ResolvedWorkspace {}
-
 }

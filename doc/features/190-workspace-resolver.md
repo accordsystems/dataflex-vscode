@@ -19,7 +19,7 @@ A DataFlex workspace is described by two INI file types.
 - `[Libraries]` — `Lib1=…`, `Lib2=…` each pointing at another `.sws`.
 - `[Conditionals]` — flags consumed by `#IFDEF` blocks; not used by the resolver.
 
-All paths in the SWS are relative to the SWS file's directory. Library keys must be sorted numerically (Lib1, Lib2, Lib10 — not lexicographic). Libraries can themselves declare libraries → recursive, potentially cyclic.
+All paths in the SWS are relative to the SWS file's directory. **Library order follows source order in the file** — the `Lib1`, `Lib2`, … naming is a user convention, not a processing rule. Whatever order the lines appear in the `.sws` is the order the resolver walks them. Libraries can themselves declare libraries → recursive, potentially cyclic.
 
 **`Config.ws`** — per-workspace source and data paths:
 - `[Workspace].Home=` relative to the Config.ws directory.
@@ -85,7 +85,7 @@ interface ResolvedWorkspace {
 
 1. **parseIni(text)** → `section → key → value`. Case-insensitive sections and keys. First `=` is the separator; values may contain `=`. Last write wins on duplicate keys. Throws on malformed lines.
 2. **resolvePath(base, relative)** → replace `\` with `/`, then `path.resolve(base, relative)` so Windows paths work on any host.
-3. **parseSws(swsPath)** → read + parseIni; extract version, conditionals, project filenames; resolve `ConfigFile` against the SWS dir; sort `[Libraries]` keys numerically and resolve each path.
+3. **parseSws(swsPath)** → read + parseIni; extract version, conditionals, project filenames; resolve `ConfigFile` against the SWS dir; collect `[Libraries]` values in source order and resolve each path against `swsDir`. JavaScript objects preserve insertion order for string keys, so `Object.values` on the parsed `[Libraries]` section gives source order for free — no explicit sort needed.
 4. **parseConfigWs(configPath)** → resolve `Home` against the Config.ws dir; split semicolon-separated `AppSrcPath` / `DDSrcPath` / `DataPath` and resolve each segment against `Home`.
 5. **resolve(swsPath, visited, depth)** → recursive entry point. Tracks a `visited` set keyed on lowercased absolute normalized paths for cycle protection. Carries `depth` so consumers can prefer main-workspace symbols.
 6. **flattenSourceDirs(workspace)** → depth-first walk yielding an ordered, deduplicated `ResolvedSourceDir[]`. Dedup key = lowercased absolute path; first occurrence wins (shadowing).
@@ -127,8 +127,8 @@ Format: `[ ]` open / `[x]` done. Each line is `[state] YYYY-MM-DD — descriptio
 - [x] 2026-05-14 — Unit tests for `parseIni` (done 2026-05-14)
 - [x] 2026-05-14 — Implement `resolvePath` — normalize Windows backslashes, then `path.resolve(base, relative)` (done 2026-05-14)
 - [x] 2026-05-14 — Tests for `resolvePath` — Windows backslash input on a non-Windows host, mixed separators, already-absolute "relative" path, `..` segments (done 2026-05-14)
-- [ ] 2026-05-14 — Implement `parseSws` — version, conditionals, projectFileNames, configFilePath, numerically sorted librarySwsPaths
-- [ ] 2026-05-14 — Tests for `parseSws` — numeric vs lexicographic library sort (Lib1/Lib2/Lib10), missing `[Properties]`, missing `ConfigFile`, no `[Libraries]` section
+- [ ] 2026-05-14 — Implement `parseSws` — version, conditionals, projectFileNames, configFilePath, source-ordered librarySwsPaths resolved to absolute paths
+- [ ] 2026-05-14 — Tests for `parseSws` — library order matches source order (Lib2 before Lib1 in the file → that order in the output), missing `[Properties]`, missing `ConfigFile`, no `[Libraries]` section
 - [ ] 2026-05-14 — Implement `parseConfigWs` — Home resolution, semicolon-split AppSrcPath/DDSrcPath/DataPath
 - [ ] 2026-05-14 — Tests for `parseConfigWs` — semicolon expansion, absolute DataPath overrides Home, missing `[Workspace]` section
 - [ ] 2026-05-14 — Implement `resolve` — recursive walk with `visited` cycle protection and `depth` tracking
@@ -139,5 +139,6 @@ Format: `[ ]` open / `[x]` done. Each line is `[state] YYYY-MM-DD — descriptio
 - [ ] 2026-05-14 — Add `dataflex.workspace.swsFile` to `package.json` `contributes.configuration.properties`
 - [ ] 2026-05-14 — Wire `connection.onInitialized` to read the setting and call the resolver
 - [ ] 2026-05-14 — Wire `connection.onDidChangeConfiguration` to re-resolve when the setting changes
-- [ ] 2026-05-14 — Remove `console.log` debug calls from `parseIni` (or move behind a debug flag)
-- [ ] 2026-05-14 — Update `workspace-resolver-plan.md` to match drift: `projectFileNames` in `ParsedSws`, `dataDirs: string[]` (not `dataPath: string`), pick one casing for `filelistPath`
+- [ ] 2026-05-14 — Update `workspace-resolver-plan.md` to match drift: `projectFileNames` in `ParsedSws`, `dataDirs: string[]` (not `dataPath: string`), pick one casing for `filelistPath`, library order is source order not numeric sort
+
+Note: routing of `console.log` calls in `parseIni` is now tracked in [../maintenance.md](../maintenance.md#001--consolelog-in-server-code-is-not-routed-to-the-lsp-output-channel-under-ipc-transport) — not a 190-specific issue.
