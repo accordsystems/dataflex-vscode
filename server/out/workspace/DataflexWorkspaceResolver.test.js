@@ -263,5 +263,203 @@ const DataflexWorkspaceResolver_1 = require("./DataflexWorkspaceResolver");
             assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseSws(swsPath));
         });
     });
+    (0, mocha_1.describe)('parseConfigWs', () => {
+        const norm = (p) => p.replace(/\\/g, '/');
+        // Config.ws lives directly in tempDir; Home=. so homeDir = tempDir.
+        // All referenced dirs (AppSrc, DDSrc, Programs, etc.) are siblings of Config.ws,
+        // which avoids any circular dependency between where Config.ws lives and ProgramPath.
+        const SAMPLE_CONFIG = [
+            '[Workspace]',
+            'Home=.',
+            'AppSrcPath=.\\AppSrc',
+            'AppHTMLPath=.\\AppHtml',
+            'BitmapPath=.\\Bitmaps',
+            'IdeSrcPath=.\\IdeSrc',
+            'DDSrcPath=.\\DDSrc',
+            'HelpPath=.\\Help',
+            'ProgramPath=.\\Programs',
+            'Description=Test Workspace',
+            'DataPath=.\\Data',
+            'FileList=.\\Data\\filelist.cfg',
+        ].join('\n');
+        // Drop a line by key prefix, for building invalid-fixture variants.
+        const dropKey = (content, key) => content.split('\n').filter(l => !l.toLowerCase().startsWith(key.toLowerCase() + '=')).join('\n');
+        let tempDir;
+        let configPath;
+        function writeFile(relPath, content = '') {
+            const fullPath = path.join(tempDir, relPath.replace(/\\/g, '/'));
+            fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+            fs.writeFileSync(fullPath, content);
+        }
+        // Creates Config.ws and every directory/file it references.
+        // Pass skip[] with names from ['AppSrc','AppHtml','Bitmaps','IdeSrc','DDSrc','Help',
+        // 'Programs','Data','Data/filelist.cfg'] to omit specific items.
+        function writeFixture(opts = {}) {
+            const content = opts.content ?? SAMPLE_CONFIG;
+            const skip = opts.skip ?? [];
+            writeFile('Config.ws', content);
+            for (const dir of ['AppSrc', 'AppHtml', 'Bitmaps', 'IdeSrc', 'DDSrc', 'Help', 'Programs', 'Data']) {
+                if (!skip.includes(dir))
+                    fs.mkdirSync(path.join(tempDir, dir), { recursive: true });
+            }
+            if (!skip.includes('Data/filelist.cfg'))
+                writeFile('Data/filelist.cfg');
+        }
+        (0, mocha_1.beforeEach)(() => {
+            tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'parseConfigWs-'));
+            configPath = path.join(tempDir, 'Config.ws');
+        });
+        (0, mocha_1.afterEach)(() => {
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        });
+        // --- Happy path (parseConfigWsContent — no disk I/O) ---
+        (0, mocha_1.it)('stores configPath and resolves homeDir against configDir', () => {
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, SAMPLE_CONFIG);
+            assert_1.strict.equal(norm(result.configPath), norm(configPath));
+            assert_1.strict.equal(norm(result.homeDir), norm(tempDir));
+        });
+        (0, mocha_1.it)('resolves appSrcDirs against homeDir', () => {
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, SAMPLE_CONFIG);
+            assert_1.strict.deepEqual(result.appSrcDirs.map(norm), [norm(path.join(tempDir, 'AppSrc'))]);
+        });
+        (0, mocha_1.it)('resolves ddSrcDirs against homeDir', () => {
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, SAMPLE_CONFIG);
+            assert_1.strict.deepEqual(result.ddSrcDirs.map(norm), [norm(path.join(tempDir, 'DDSrc'))]);
+        });
+        (0, mocha_1.it)('resolves programPath against homeDir', () => {
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, SAMPLE_CONFIG);
+            assert_1.strict.equal(norm(result.programPath), norm(path.join(tempDir, 'Programs')));
+        });
+        (0, mocha_1.it)('resolves filelistPath against homeDir', () => {
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, SAMPLE_CONFIG);
+            assert_1.strict.equal(norm(result.filelistPath), norm(path.join(tempDir, 'Data', 'filelist.cfg')));
+        });
+        (0, mocha_1.it)('stores description', () => {
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, SAMPLE_CONFIG);
+            assert_1.strict.equal(result.description, 'Test Workspace');
+        });
+        (0, mocha_1.it)('returns empty description when key is absent', () => {
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'Description'));
+            assert_1.strict.equal(result.description, '');
+        });
+        (0, mocha_1.it)('resolves homeDir one level up when Home=..', () => {
+            // Config.ws placed in a subdir so Home=.. resolves back to tempDir
+            const subConfigPath = path.join(tempDir, 'Programs', 'Config.ws');
+            const subContent = SAMPLE_CONFIG.replace('Home=.', 'Home=..');
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(subConfigPath, subContent);
+            assert_1.strict.equal(norm(result.homeDir), norm(tempDir));
+        });
+        // --- Semicolon expansion ---
+        (0, mocha_1.it)('expands semicolon-separated AppSrcPath into multiple dirs in order', () => {
+            const multiSrc = SAMPLE_CONFIG.replace('AppSrcPath=.\\AppSrc', 'AppSrcPath=.\\AppSrc1;.\\AppSrc2;.\\AppSrc3');
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, multiSrc);
+            assert_1.strict.deepEqual(result.appSrcDirs.map(norm), [
+                norm(path.join(tempDir, 'AppSrc1')),
+                norm(path.join(tempDir, 'AppSrc2')),
+                norm(path.join(tempDir, 'AppSrc3')),
+            ]);
+        });
+        (0, mocha_1.it)('filters out trailing semicolons in AppSrcPath', () => {
+            const trailing = SAMPLE_CONFIG.replace('AppSrcPath=.\\AppSrc', 'AppSrcPath=.\\AppSrc1;.\\AppSrc2;');
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, trailing);
+            assert_1.strict.equal(result.appSrcDirs.length, 2);
+        });
+        (0, mocha_1.it)('expands semicolon-separated DDSrcPath', () => {
+            const multiDd = SAMPLE_CONFIG.replace('DDSrcPath=.\\DDSrc', 'DDSrcPath=.\\DDSrc1;.\\DDSrc2');
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, multiDd);
+            assert_1.strict.equal(result.ddSrcDirs.length, 2);
+        });
+        // --- Optional fields absent ---
+        (0, mocha_1.it)('returns empty string for appHTMLDir when AppHTMLPath is absent', () => {
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'AppHTMLPath'));
+            assert_1.strict.equal(result.appHTMLDir, '');
+        });
+        (0, mocha_1.it)('returns empty bitmapDirs when BitmapPath is absent', () => {
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'BitmapPath'));
+            assert_1.strict.deepEqual(result.bitmapDirs, []);
+        });
+        (0, mocha_1.it)('returns empty ideSrcDirs when IdeSrcPath is absent', () => {
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'IdeSrcPath'));
+            assert_1.strict.deepEqual(result.ideSrcDirs, []);
+        });
+        (0, mocha_1.it)('returns empty helpDirs when HelpPath is absent', () => {
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'HelpPath'));
+            assert_1.strict.deepEqual(result.helpDirs, []);
+        });
+        // --- Absolute DataPath (Windows-only: drive-letter absoluteness only recognized on Win32) ---
+        const onWindows = process.platform === 'win32';
+        (onWindows ? mocha_1.it : mocha_1.it.skip)('absolute DataPath is not re-resolved against homeDir', () => {
+            const absData = SAMPLE_CONFIG.replace('DataPath=.\\Data', 'DataPath=D:\\absolute\\data');
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, absData);
+            assert_1.strict.equal(norm(result.dataDirs[0]), 'D:/absolute/data');
+        });
+        // --- Validation failures (structure — parseConfigWsContent, no disk needed) ---
+        (0, mocha_1.it)('throws when [Workspace] section is missing', () => {
+            assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, '[Other]\nkey=val'));
+        });
+        (0, mocha_1.it)('throws when Home key is missing', () => {
+            assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'Home')));
+        });
+        (0, mocha_1.it)('throws when AppSrcPath key is missing', () => {
+            assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'AppSrcPath')));
+        });
+        (0, mocha_1.it)('throws when DDSrcPath key is missing', () => {
+            assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'DDSrcPath')));
+        });
+        (0, mocha_1.it)('throws when ProgramPath key is missing', () => {
+            assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'ProgramPath')));
+        });
+        (0, mocha_1.it)('throws when DataPath key is missing', () => {
+            assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'DataPath')));
+        });
+        (0, mocha_1.it)('throws when FileList key is missing', () => {
+            assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'FileList')));
+        });
+        // --- Disk existence (parseConfigWs) ---
+        (0, mocha_1.it)('throws when Config.ws file does not exist', () => {
+            assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWs(path.join(tempDir, 'missing.ws')));
+        });
+        (0, mocha_1.it)('parses a fully-valid Config.ws end-to-end', () => {
+            writeFixture();
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWs(configPath);
+            assert_1.strict.equal(norm(result.homeDir), norm(tempDir));
+            assert_1.strict.equal(result.appSrcDirs.length, 1);
+            assert_1.strict.equal(result.ddSrcDirs.length, 1);
+        });
+        (0, mocha_1.it)('throws when homeDir does not exist on disk', () => {
+            const badHome = SAMPLE_CONFIG.replace('Home=.', 'Home=.\\nonexistent-home');
+            writeFixture({ content: badHome });
+            assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWs(configPath));
+        });
+        (0, mocha_1.it)('throws when an appSrcDir does not exist on disk', () => {
+            writeFixture({ skip: ['AppSrc'] });
+            assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWs(configPath));
+        });
+        (0, mocha_1.it)('throws when a ddSrcDir does not exist on disk', () => {
+            writeFixture({ skip: ['DDSrc'] });
+            assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWs(configPath));
+        });
+        (0, mocha_1.it)('throws when programPath does not exist on disk', () => {
+            writeFixture({ skip: ['Programs'] });
+            assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWs(configPath));
+        });
+        (0, mocha_1.it)('throws when a dataDir does not exist on disk', () => {
+            // Also skip the filelist file so writeFile does not auto-create the Data dir
+            writeFixture({ skip: ['Data', 'Data/filelist.cfg'] });
+            assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWs(configPath));
+        });
+        (0, mocha_1.it)('throws when filelistPath does not exist on disk', () => {
+            writeFixture({ skip: ['Data/filelist.cfg'] });
+            assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWs(configPath));
+        });
+        (0, mocha_1.it)('does not throw when AppHTMLPath is absent (optional)', () => {
+            writeFixture({ content: dropKey(SAMPLE_CONFIG, 'AppHTMLPath'), skip: ['AppHtml'] });
+            assert_1.strict.doesNotThrow(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWs(configPath));
+        });
+        (0, mocha_1.it)('throws when AppHTMLPath is set but directory does not exist', () => {
+            writeFixture({ skip: ['AppHtml'] });
+            assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWs(configPath));
+        });
+    });
 });
 //# sourceMappingURL=DataflexWorkspaceResolver.test.js.map

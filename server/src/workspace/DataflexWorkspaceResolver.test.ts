@@ -293,4 +293,250 @@ describe('DataflexWorkspaceResolver', () => {
             assert.throws(() => DataflexWorkspaceResolver.parseSws(swsPath));
         });
     });
+
+    describe('parseConfigWs', () => {
+        const norm = (p: string) => p.replace(/\\/g, '/');
+
+        // Config.ws lives directly in tempDir; Home=. so homeDir = tempDir.
+        // All referenced dirs (AppSrc, DDSrc, Programs, etc.) are siblings of Config.ws,
+        // which avoids any circular dependency between where Config.ws lives and ProgramPath.
+        const SAMPLE_CONFIG = [
+            '[Workspace]',
+            'Home=.',
+            'AppSrcPath=.\\AppSrc',
+            'AppHTMLPath=.\\AppHtml',
+            'BitmapPath=.\\Bitmaps',
+            'IdeSrcPath=.\\IdeSrc',
+            'DDSrcPath=.\\DDSrc',
+            'HelpPath=.\\Help',
+            'ProgramPath=.\\Programs',
+            'Description=Test Workspace',
+            'DataPath=.\\Data',
+            'FileList=.\\Data\\filelist.cfg',
+        ].join('\n');
+
+        // Drop a line by key prefix, for building invalid-fixture variants.
+        const dropKey = (content: string, key: string) =>
+            content.split('\n').filter(l => !l.toLowerCase().startsWith(key.toLowerCase() + '=')).join('\n');
+
+        let tempDir: string;
+        let configPath: string;
+
+        function writeFile(relPath: string, content = ''): void {
+            const fullPath = path.join(tempDir, relPath.replace(/\\/g, '/'));
+            fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+            fs.writeFileSync(fullPath, content);
+        }
+
+        // Creates Config.ws and every directory/file it references.
+        // Pass skip[] with names from ['AppSrc','AppHtml','Bitmaps','IdeSrc','DDSrc','Help',
+        // 'Programs','Data','Data/filelist.cfg'] to omit specific items.
+        function writeFixture(opts: { content?: string; skip?: string[] } = {}): void {
+            const content = opts.content ?? SAMPLE_CONFIG;
+            const skip = opts.skip ?? [];
+            writeFile('Config.ws', content);
+            for (const dir of ['AppSrc', 'AppHtml', 'Bitmaps', 'IdeSrc', 'DDSrc', 'Help', 'Programs', 'Data']) {
+                if (!skip.includes(dir))
+                    fs.mkdirSync(path.join(tempDir, dir), { recursive: true });
+            }
+            if (!skip.includes('Data/filelist.cfg'))
+                writeFile('Data/filelist.cfg');
+        }
+
+        beforeEach(() => {
+            tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'parseConfigWs-'));
+            configPath = path.join(tempDir, 'Config.ws');
+        });
+
+        afterEach(() => {
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        });
+
+        // --- Happy path (parseConfigWsContent — no disk I/O) ---
+
+        it('stores configPath and resolves homeDir against configDir', () => {
+            const result = DataflexWorkspaceResolver.parseConfigWsContent(configPath, SAMPLE_CONFIG);
+            assert.equal(norm(result.configPath), norm(configPath));
+            assert.equal(norm(result.homeDir), norm(tempDir));
+        });
+
+        it('resolves appSrcDirs against homeDir', () => {
+            const result = DataflexWorkspaceResolver.parseConfigWsContent(configPath, SAMPLE_CONFIG);
+            assert.deepEqual(result.appSrcDirs.map(norm), [norm(path.join(tempDir, 'AppSrc'))]);
+        });
+
+        it('resolves ddSrcDirs against homeDir', () => {
+            const result = DataflexWorkspaceResolver.parseConfigWsContent(configPath, SAMPLE_CONFIG);
+            assert.deepEqual(result.ddSrcDirs.map(norm), [norm(path.join(tempDir, 'DDSrc'))]);
+        });
+
+        it('resolves programPath against homeDir', () => {
+            const result = DataflexWorkspaceResolver.parseConfigWsContent(configPath, SAMPLE_CONFIG);
+            assert.equal(norm(result.programPath), norm(path.join(tempDir, 'Programs')));
+        });
+
+        it('resolves filelistPath against homeDir', () => {
+            const result = DataflexWorkspaceResolver.parseConfigWsContent(configPath, SAMPLE_CONFIG);
+            assert.equal(norm(result.filelistPath), norm(path.join(tempDir, 'Data', 'filelist.cfg')));
+        });
+
+        it('stores description', () => {
+            const result = DataflexWorkspaceResolver.parseConfigWsContent(configPath, SAMPLE_CONFIG);
+            assert.equal(result.description, 'Test Workspace');
+        });
+
+        it('returns empty description when key is absent', () => {
+            const result = DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'Description'));
+            assert.equal(result.description, '');
+        });
+
+        it('resolves homeDir one level up when Home=..', () => {
+            // Config.ws placed in a subdir so Home=.. resolves back to tempDir
+            const subConfigPath = path.join(tempDir, 'Programs', 'Config.ws');
+            const subContent = SAMPLE_CONFIG.replace('Home=.', 'Home=..');
+            const result = DataflexWorkspaceResolver.parseConfigWsContent(subConfigPath, subContent);
+            assert.equal(norm(result.homeDir), norm(tempDir));
+        });
+
+        // --- Semicolon expansion ---
+
+        it('expands semicolon-separated AppSrcPath into multiple dirs in order', () => {
+            const multiSrc = SAMPLE_CONFIG.replace('AppSrcPath=.\\AppSrc', 'AppSrcPath=.\\AppSrc1;.\\AppSrc2;.\\AppSrc3');
+            const result = DataflexWorkspaceResolver.parseConfigWsContent(configPath, multiSrc);
+            assert.deepEqual(result.appSrcDirs.map(norm), [
+                norm(path.join(tempDir, 'AppSrc1')),
+                norm(path.join(tempDir, 'AppSrc2')),
+                norm(path.join(tempDir, 'AppSrc3')),
+            ]);
+        });
+
+        it('filters out trailing semicolons in AppSrcPath', () => {
+            const trailing = SAMPLE_CONFIG.replace('AppSrcPath=.\\AppSrc', 'AppSrcPath=.\\AppSrc1;.\\AppSrc2;');
+            const result = DataflexWorkspaceResolver.parseConfigWsContent(configPath, trailing);
+            assert.equal(result.appSrcDirs.length, 2);
+        });
+
+        it('expands semicolon-separated DDSrcPath', () => {
+            const multiDd = SAMPLE_CONFIG.replace('DDSrcPath=.\\DDSrc', 'DDSrcPath=.\\DDSrc1;.\\DDSrc2');
+            const result = DataflexWorkspaceResolver.parseConfigWsContent(configPath, multiDd);
+            assert.equal(result.ddSrcDirs.length, 2);
+        });
+
+        // --- Optional fields absent ---
+
+        it('returns empty string for appHTMLDir when AppHTMLPath is absent', () => {
+            const result = DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'AppHTMLPath'));
+            assert.equal(result.appHTMLDir, '');
+        });
+
+        it('returns empty bitmapDirs when BitmapPath is absent', () => {
+            const result = DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'BitmapPath'));
+            assert.deepEqual(result.bitmapDirs, []);
+        });
+
+        it('returns empty ideSrcDirs when IdeSrcPath is absent', () => {
+            const result = DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'IdeSrcPath'));
+            assert.deepEqual(result.ideSrcDirs, []);
+        });
+
+        it('returns empty helpDirs when HelpPath is absent', () => {
+            const result = DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'HelpPath'));
+            assert.deepEqual(result.helpDirs, []);
+        });
+
+        // --- Absolute DataPath (Windows-only: drive-letter absoluteness only recognized on Win32) ---
+
+        const onWindows = process.platform === 'win32';
+        (onWindows ? it : it.skip)('absolute DataPath is not re-resolved against homeDir', () => {
+            const absData = SAMPLE_CONFIG.replace('DataPath=.\\Data', 'DataPath=D:\\absolute\\data');
+            const result = DataflexWorkspaceResolver.parseConfigWsContent(configPath, absData);
+            assert.equal(norm(result.dataDirs[0]!), 'D:/absolute/data');
+        });
+
+        // --- Validation failures (structure — parseConfigWsContent, no disk needed) ---
+
+        it('throws when [Workspace] section is missing', () => {
+            assert.throws(() => DataflexWorkspaceResolver.parseConfigWsContent(configPath, '[Other]\nkey=val'));
+        });
+
+        it('throws when Home key is missing', () => {
+            assert.throws(() => DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'Home')));
+        });
+
+        it('throws when AppSrcPath key is missing', () => {
+            assert.throws(() => DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'AppSrcPath')));
+        });
+
+        it('throws when DDSrcPath key is missing', () => {
+            assert.throws(() => DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'DDSrcPath')));
+        });
+
+        it('throws when ProgramPath key is missing', () => {
+            assert.throws(() => DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'ProgramPath')));
+        });
+
+        it('throws when DataPath key is missing', () => {
+            assert.throws(() => DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'DataPath')));
+        });
+
+        it('throws when FileList key is missing', () => {
+            assert.throws(() => DataflexWorkspaceResolver.parseConfigWsContent(configPath, dropKey(SAMPLE_CONFIG, 'FileList')));
+        });
+
+        // --- Disk existence (parseConfigWs) ---
+
+        it('throws when Config.ws file does not exist', () => {
+            assert.throws(() => DataflexWorkspaceResolver.parseConfigWs(path.join(tempDir, 'missing.ws')));
+        });
+
+        it('parses a fully-valid Config.ws end-to-end', () => {
+            writeFixture();
+            const result = DataflexWorkspaceResolver.parseConfigWs(configPath);
+            assert.equal(norm(result.homeDir), norm(tempDir));
+            assert.equal(result.appSrcDirs.length, 1);
+            assert.equal(result.ddSrcDirs.length, 1);
+        });
+
+        it('throws when homeDir does not exist on disk', () => {
+            const badHome = SAMPLE_CONFIG.replace('Home=.', 'Home=.\\nonexistent-home');
+            writeFixture({ content: badHome });
+            assert.throws(() => DataflexWorkspaceResolver.parseConfigWs(configPath));
+        });
+
+        it('throws when an appSrcDir does not exist on disk', () => {
+            writeFixture({ skip: ['AppSrc'] });
+            assert.throws(() => DataflexWorkspaceResolver.parseConfigWs(configPath));
+        });
+
+        it('throws when a ddSrcDir does not exist on disk', () => {
+            writeFixture({ skip: ['DDSrc'] });
+            assert.throws(() => DataflexWorkspaceResolver.parseConfigWs(configPath));
+        });
+
+        it('throws when programPath does not exist on disk', () => {
+            writeFixture({ skip: ['Programs'] });
+            assert.throws(() => DataflexWorkspaceResolver.parseConfigWs(configPath));
+        });
+
+        it('throws when a dataDir does not exist on disk', () => {
+            // Also skip the filelist file so writeFile does not auto-create the Data dir
+            writeFixture({ skip: ['Data', 'Data/filelist.cfg'] });
+            assert.throws(() => DataflexWorkspaceResolver.parseConfigWs(configPath));
+        });
+
+        it('throws when filelistPath does not exist on disk', () => {
+            writeFixture({ skip: ['Data/filelist.cfg'] });
+            assert.throws(() => DataflexWorkspaceResolver.parseConfigWs(configPath));
+        });
+
+        it('does not throw when AppHTMLPath is absent (optional)', () => {
+            writeFixture({ content: dropKey(SAMPLE_CONFIG, 'AppHTMLPath'), skip: ['AppHtml'] });
+            assert.doesNotThrow(() => DataflexWorkspaceResolver.parseConfigWs(configPath));
+        });
+
+        it('throws when AppHTMLPath is set but directory does not exist', () => {
+            writeFixture({ skip: ['AppHtml'] });
+            assert.throws(() => DataflexWorkspaceResolver.parseConfigWs(configPath));
+        });
+    });
 });

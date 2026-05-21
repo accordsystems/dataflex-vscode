@@ -107,12 +107,12 @@ class DataflexWorkspaceResolver {
     }
     // Validate SWS File KVPs and Sections from parseSWS function. Throw if invalid. 
     // parseSWS returns everything in lowercase
+    // Validates structure only — no disk access. Path existence is checked separately in checkResolvedSwsPaths.
     // Validation includes:
     // - Required Sections: [Properties], [WorkspacePaths], [Projects]
     // - Required KVPs: Version in [Properties], at least 1 Project in [Projects], ConfigFile in [WorkspacePaths]
-    // - No duplicate project keys (Project0, Project1, etc. must be sequential with no gaps)
-    // - Valid paths for ConfigFile and Projects (relative dirs are relative to swsDir, may be absolute, must exist on disk)
-    // - Libraries (Optional) - If exist, do they resolve?
+    // - Blank values rejected for all required keys and any library entries
+    // - Libraries and Conditionals are optional sections
     //
     // Sample INI File
     // 
@@ -131,65 +131,35 @@ class DataflexWorkspaceResolver {
     // [Projects] <- Required, with at least one project
     // Project0=WebApp.src
     // Project1=CarmTests.src
-    static validateParsedSws(swsPath, parsedSws) {
+    static validateParsedSws(parsedSws) {
         //Properties
         const propertiesSection = parsedSws['properties'];
-        if (!propertiesSection) {
+        if (!propertiesSection)
             throw new Error('Missing required [Properties] section');
-        }
-        //Properties : Check Version
-        if (!propertiesSection['version']) {
+        if (!propertiesSection['version'])
             throw new Error('Missing required key "Version" in [Properties] section');
-        }
-        //WorkspacePaths: Required: Check Section Exists, then Check ConfigFile exists, is a valid path, can be accessed.
+        //WorkspacePaths
         const workspacePathsSection = parsedSws['workspacepaths'];
-        if (!workspacePathsSection) {
+        if (!workspacePathsSection)
             throw new Error('Missing required [WorkspacePaths] section');
-        }
-        // WorkspacePaths: Check ConfigFile exists and is valid path
-        if (!workspacePathsSection['configfile']) {
-            throw new Error('Missing required key "ConfigFile" in [WorkspacePaths] section');
-        }
-        if (workspacePathsSection['configfile'].trim() === '') {
-            throw new Error('Invalid "ConfigFile" path in [WorkspacePaths] section: cannot be empty or whitespace');
-        }
-        // Resolve ConfigFile path against swsDir and check existence
-        const swsDir = path.dirname(swsPath);
-        const resolvedConfigFilePath = this.resolveRelativePath(swsDir, workspacePathsSection['configfile']);
-        if (!fs.existsSync(resolvedConfigFilePath)) {
-            throw new Error(`Config file not found at path: "${resolvedConfigFilePath}"`);
-        }
-        //Projects: Check Section Exists. for each key, check uniqueness, valid path, existence. At least 1 project is required. 
+        if (!workspacePathsSection['configfile'] || workspacePathsSection['configfile'].trim() === '')
+            throw new Error('Missing or blank required key "ConfigFile" in [WorkspacePaths] section');
+        //Projects
         const projectsSection = parsedSws['projects'];
-        if (!projectsSection) {
+        if (!projectsSection)
             throw new Error('Missing required [Projects] section');
-        }
-        // Projects: Check for at least 1 project. name doesn't matter, but must be unique
-        const projectKeys = Object.keys(projectsSection);
-        if (projectKeys.length === 0) {
+        if (Object.keys(projectsSection).length === 0)
             throw new Error('At least one project is required in [Projects] section');
-        }
-        //Projects: At least 1 project, no dupes. Check that each project file exists and is valid path
         for (const [projectKey, projectRelativePath] of Object.entries(projectsSection)) {
-            if (projectRelativePath.trim() === '') {
+            if (projectRelativePath.trim() === '')
                 throw new Error(`Invalid path for project "${projectKey}" in [Projects] section: cannot be empty or whitespace`);
-            }
-            const resolvedProjectPath = this.resolveRelativePath(swsDir, projectRelativePath);
-            if (!fs.existsSync(resolvedProjectPath)) {
-                throw new Error(`Project file for "${projectKey}" not found at path: "${resolvedProjectPath}"`);
-            }
         }
-        //Check Libraries: Keys must be unique, values must be valid paths if they exist. Libraries are optional, so 0 is valid.
+        //Libraries (optional) — blank values are invalid if the key exists
         const librariesSection = parsedSws['libraries'];
         if (librariesSection) {
             for (const [libraryKey, libraryPath] of Object.entries(librariesSection)) {
-                if (libraryPath.trim() === '') {
-                    throw new Error(`Invalid library path for library "${libraryKey} in [Libraries] section: cannot be empty or whitespace`);
-                }
-                const resolvedLibraryPath = this.resolveRelativePath(swsDir, libraryPath);
-                if (!fs.existsSync(resolvedLibraryPath)) {
-                    throw new Error(`library path for "${libraryKey}" does not appear to exist at "${resolvedLibraryPath}`);
-                }
+                if (libraryPath.trim() === '')
+                    throw new Error(`Invalid library path for library "${libraryKey}" in [Libraries] section: cannot be empty or whitespace`);
             }
         }
     }
@@ -247,32 +217,86 @@ class DataflexWorkspaceResolver {
         }
         //get dirname
         const swsDir = path.dirname(resolvedPath);
-        // Read in File Contect
+        // Read in File Content
         const swsContent = fs.readFileSync(resolvedPath, 'utf-8');
         // Parse as Ini
         const parsedSws = this.parseIni(swsContent);
-        // Validate
-        this.validateParsedSws(resolvedPath, parsedSws);
-        // Fill in Sections into ParsedSws Object and return    
+        // Validate structure
+        this.validateParsedSws(parsedSws);
+        // Build result
         const version = parsedSws['properties']['version'];
         const configFilePath = this.resolveRelativePath(swsDir, parsedSws['workspacepaths'].configfile);
-        const projectSection = parsedSws['projects'];
-        const projectFileNames = Object.values(projectSection);
-        // Optional: Conditionals, library Paths
+        const projectFileNames = Object.values(parsedSws['projects']);
         const conditionalSection = parsedSws['conditionals'] ?? {};
         const librariesSection = parsedSws['libraries'];
         const librarySwsPaths = librariesSection
             ? Object.values(librariesSection).map(p => this.resolveRelativePath(swsDir, p))
             : [];
-        return {
-            swsPath: swsPath,
+        const result = {
+            swsPath: resolvedPath,
             swsDir: swsDir,
             version: version,
             projectFileNames: projectFileNames,
             conditionals: conditionalSection,
             configFilePath: configFilePath,
-            librarySwsPaths: librarySwsPaths ?? []
+            librarySwsPaths: librarySwsPaths
         };
+        // Check resolved paths exist on disk
+        this.checkResolvedSwsPaths(result);
+        return result;
+    }
+    static checkResolvedSwsPaths(sws) {
+        if (!fs.existsSync(sws.configFilePath))
+            throw new Error(`Config file not found: "${sws.configFilePath}"`);
+        for (const projectFile of sws.projectFileNames) {
+            const resolved = this.resolveRelativePath(sws.swsDir, projectFile);
+            if (!fs.existsSync(resolved))
+                throw new Error(`Project file not found: "${resolved}"`);
+        }
+        for (const libPath of sws.librarySwsPaths) {
+            if (!fs.existsSync(libPath))
+                throw new Error(`Library SWS not found: "${libPath}"`);
+        }
+    }
+    static validateParsedWs(parsedWsIni) {
+        //Properties
+        const workspaceSection = parsedWsIni['workspace'];
+        if (!workspaceSection) {
+            throw new Error('Missing required [Workspace] section');
+        }
+        //Home
+        // check home key exists
+        // resolve path
+        // check home path exists
+        if (!workspaceSection['home']) {
+            throw new Error('Missing required key "Home" in [Workspace] section');
+        }
+        //AppSrc key : Exists, can access paths
+        if (!workspaceSection['appsrcpath']) {
+            throw new Error('Missing required key "AppSrcPath" in [Workspace] section');
+        }
+        //AppHTML : Optional
+        //DdSrcPath : Exists, can access paths   
+        if (!workspaceSection['ddsrcpath']) {
+            throw new Error('Missing required key "DdSrcPath" in [Workspace] section');
+        }
+        //ProgramPath : Exists, can access path 
+        if (!workspaceSection['programpath']) {
+            throw new Error('Missing required key "ProgramPath" in [Workspace] section');
+        }
+        //DataPath : Directories exist
+        if (!workspaceSection['datapath']) {
+            throw new Error('Missing required key "DataPath" in [Workspace] section');
+        }
+        //FileList: required, exists and can access file
+        if (!workspaceSection['filelist']) {
+            throw new Error('Missing required key "FileList" in [Workspace] section');
+        }
+        // Not Required:
+        //Description
+        //BitmapPath
+        //IdeSrcPath
+        //HelpPath    
     }
     /**
      * Parses the UTF-8 content of a Config.ws file and extracts the relevant fields for the resolver.
@@ -301,32 +325,118 @@ class DataflexWorkspaceResolver {
         FileList=D:\some\data\path\filelist.cfg
      * ```
     */
-    static parseConfigWsContent(configContent) {
-        // dummy read for compiler
-        var configContentDummy = configContent;
-        configContentDummy += '';
-        // For now, just return dummy data. We'll fill this in later when we implement config.ws parsing.
-        return {
-            configPath: 'dummyConfigPath',
-            homeDir: 'dummyHomeDir',
-            appSrcDirs: ['dummyAppSrcDir1', 'dummyAppSrcDir2'],
-            ddSrcDirs: ['dummyDdSrcDir1', 'dummyDdSrcDir2'],
-            dataDirs: ['dummyDataDir1', 'dummyDataDir2'],
-            filelistPath: 'dummyFilelistPath'
+    static parseConfigWsContent(configPath, configContent) {
+        const parsedConfigWs = this.parseIni(configContent);
+        this.validateParsedWs(parsedConfigWs);
+        // Fill in Sections    
+        const configDir = path.dirname(configPath);
+        // [Workspace]
+        // Home : Single Path, Usually "..\" as config is by convention in the Program Path if Relative, resolve relative to config path. if absolute, use that    
+        const homeDir = parsedConfigWs['workspace']['home'];
+        const resolvedhomeDir = this.resolveRelativePath(configDir, homeDir);
+        // AppSrcPath : Multiple, split with, resolve against homepath ;
+        const appsrcKey = parsedConfigWs['workspace']['appsrcpath'];
+        const resolvedAppSrcDirs = appsrcKey
+            .split(';')
+            .filter(dir => dir.trim() !== '')
+            .map(dir => this.resolveRelativePath(resolvedhomeDir, dir));
+        // AppHtmlPath : Single Path, optional
+        const rawAppHtmlPath = parsedConfigWs['workspace']['apphtmlpath'];
+        const resolvedAppHtmlPath = rawAppHtmlPath
+            ? this.resolveRelativePath(resolvedhomeDir, rawAppHtmlPath)
+            : '';
+        // BitmapPaths : Multiple, Optional
+        const resolvedBitMapDirs = parsedConfigWs['workspace']['bitmappath']
+            ?.split(';')
+            .filter(dir => dir.trim() !== '')
+            .map(dir => this.resolveRelativePath(resolvedhomeDir, dir)) ?? [];
+        // IdeSrcPath: Multiple, Optional
+        const resolvedIdePath = parsedConfigWs['workspace']['idesrcpath']
+            ?.split(';')
+            .filter(dir => dir.trim() !== '')
+            .map(dir => this.resolveRelativePath(resolvedhomeDir, dir)) ?? []; //could be null    
+        // DdSrcPath : Required, multiple
+        const resolvedDdSrcDirs = parsedConfigWs['workspace']['ddsrcpath']
+            .split(';')
+            .filter(dir => dir.trim() !== '')
+            .map(dir => this.resolveRelativePath(resolvedhomeDir, dir)); //could be null    
+        // HelpPath
+        const resolvedHelpDirs = parsedConfigWs['workspace']['helppath']
+            ?.split(';')
+            .filter(dir => dir.trim() !== '')
+            .map(dir => this.resolveRelativePath(resolvedhomeDir, dir)) ?? []; //could be null    
+        // ProgramPath: Required, singular
+        const resolvedProgramPath = this.resolveRelativePath(resolvedhomeDir, parsedConfigWs['workspace']['programpath']);
+        // Description
+        const description = parsedConfigWs['workspace']['description'] ?? '';
+        // DataPath
+        const resolvedDataDirs = parsedConfigWs['workspace']['datapath']
+            .split(';')
+            .filter(dir => dir.trim() !== '')
+            .map(dir => this.resolveRelativePath(resolvedhomeDir, dir)); //could be null    
+        // FileListPath
+        const resolvedFileListPath = this.resolveRelativePath(resolvedhomeDir, parsedConfigWs['workspace']['filelist']);
+        const result = {
+            configPath: configPath,
+            homeDir: resolvedhomeDir,
+            appSrcDirs: resolvedAppSrcDirs,
+            appHTMLDir: resolvedAppHtmlPath,
+            bitmapDirs: resolvedBitMapDirs,
+            ideSrcDirs: resolvedIdePath,
+            ddSrcDirs: resolvedDdSrcDirs,
+            helpDirs: resolvedHelpDirs,
+            programPath: resolvedProgramPath,
+            description: description,
+            dataDirs: resolvedDataDirs,
+            filelistPath: resolvedFileListPath
         };
+        return result;
     }
-    /**
-     *
-     * @param iniFullText
-     * @returns Record<string, Record<string, string>>
-     *
-     * Rules:
-     *
-     */
+    static checkResolvedConfigWsPaths(config) {
+        if (!fs.existsSync(config.homeDir))
+            throw new Error(`Home directory not found: "${config.homeDir}"`);
+        for (const dir of config.appSrcDirs) {
+            if (!fs.existsSync(dir))
+                throw new Error(`AppSrc directory not found: "${dir}"`);
+        }
+        for (const dir of config.ddSrcDirs) {
+            if (!fs.existsSync(dir))
+                throw new Error(`DdSrc directory not found: "${dir}"`);
+        }
+        if (!fs.existsSync(config.programPath))
+            throw new Error(`Program directory not found: "${config.programPath}"`);
+        for (const dir of config.dataDirs) {
+            if (!fs.existsSync(dir))
+                throw new Error(`Data directory not found: "${dir}"`);
+        }
+        if (!fs.existsSync(config.filelistPath))
+            throw new Error(`FileList not found: "${config.filelistPath}"`);
+        // Optional — only checked if present
+        if (config.appHTMLDir && !fs.existsSync(config.appHTMLDir))
+            throw new Error(`AppHTML directory not found: "${config.appHTMLDir}"`);
+        for (const dir of config.bitmapDirs) {
+            if (!fs.existsSync(dir))
+                throw new Error(`Bitmap directory not found: "${dir}"`);
+        }
+        for (const dir of config.ideSrcDirs) {
+            if (!fs.existsSync(dir))
+                throw new Error(`IdeSrc directory not found: "${dir}"`);
+        }
+        for (const dir of config.helpDirs) {
+            if (!fs.existsSync(dir))
+                throw new Error(`Help directory not found: "${dir}"`);
+        }
+    }
     static parseConfigWs(configPath) {
-        //return dummy for now
-        const configContent = fs.readFileSync(configPath, 'utf-8');
-        return this.parseConfigWsContent(configContent);
+        const resolvedConfigPath = path.resolve(configPath);
+        if (!fs.existsSync(resolvedConfigPath)) {
+            throw new Error(`Config.ws file not found at path: "${resolvedConfigPath}"`);
+        }
+        const configContent = fs.readFileSync(resolvedConfigPath, 'utf-8');
+        const result = this.parseConfigWsContent(resolvedConfigPath, configContent);
+        //check paths
+        this.checkResolvedConfigWsPaths(result);
+        return result;
     }
 }
 exports.DataflexWorkspaceResolver = DataflexWorkspaceResolver;

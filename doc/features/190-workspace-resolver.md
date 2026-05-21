@@ -130,8 +130,11 @@ Format: `[ ]` open / `[x]` done. Each line is `[state] YYYY-MM-DD — descriptio
 - [x] 2026-05-14 — Implement `parseSws` — version, conditionals, projectFileNames, configFilePath, source-ordered librarySwsPaths resolved to absolute paths (done 2026-05-14)
 - [x] 2026-05-14 — Implement `validateParsedSws` — required sections/keys, path existence checks for ConfigFile, projects, and libraries (done 2026-05-14)
 - [x] 2026-05-14 — Tests for `parseSws` — library order matches source order (Lib2 before Lib1 in the file → that order in the output), missing `[Properties]`, missing `ConfigFile`, no `[Libraries]` section (done 2026-05-14)
-- [ ] 2026-05-14 — Implement `parseConfigWs` — Home resolution, semicolon-split AppSrcPath/DDSrcPath/DataPath
-- [ ] 2026-05-14 — Tests for `parseConfigWs` — semicolon expansion, absolute DataPath overrides Home, missing `[Workspace]` section
+- [x] 2026-05-14 — Implement `parseConfigWs` — Home resolution, semicolon-split AppSrcPath/DDSrcPath/DataPath (done 2026-05-21)
+- [x] 2026-05-21 — Refactor `validateParsedSws` / `parseSws` to match Config.ws pattern: validate = structure only, `checkResolvedSwsPaths` = disk checks (done 2026-05-21)
+- [x] 2026-05-21 — Implement `validateParsedWs` — structure-only checks, `appHTMLDir` treated as optional (done 2026-05-21)
+- [x] 2026-05-21 — Implement `checkResolvedConfigWsPaths` — required: homeDir, appSrcDirs, ddSrcDirs, programPath, dataDirs, filelistPath; optional: appHTMLDir, bitmapDirs, ideSrcDirs, helpDirs (done 2026-05-21)
+- [ ] 2026-05-21 — Tests for `parseConfigWs` / `parseConfigWsContent` — semicolon expansion, absolute DataPath, missing `[Workspace]` section, optional fields absent
 - [ ] 2026-05-14 — Implement `resolve` — recursive walk with `visited` cycle protection and `depth` tracking
 - [ ] 2026-05-14 — Tests for `resolve` — simple workspace, two-level library, cyclic library reference, missing library file (graceful skip)
 - [ ] 2026-05-14 — Implement `flattenSourceDirs` — depth-first walk, dedup by lowercased absolute path

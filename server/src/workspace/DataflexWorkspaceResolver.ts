@@ -145,12 +145,12 @@ static resolveRelativePath(baseDir: string, relativePath: string): string {
 
 // Validate SWS File KVPs and Sections from parseSWS function. Throw if invalid. 
 // parseSWS returns everything in lowercase
+// Validates structure only — no disk access. Path existence is checked separately in checkResolvedSwsPaths.
 // Validation includes:
 // - Required Sections: [Properties], [WorkspacePaths], [Projects]
 // - Required KVPs: Version in [Properties], at least 1 Project in [Projects], ConfigFile in [WorkspacePaths]
-// - No duplicate project keys (Project0, Project1, etc. must be sequential with no gaps)
-// - Valid paths for ConfigFile and Projects (relative dirs are relative to swsDir, may be absolute, must exist on disk)
-// - Libraries (Optional) - If exist, do they resolve?
+// - Blank values rejected for all required keys and any library entries
+// - Libraries and Conditionals are optional sections
 //
 // Sample INI File
 // 
@@ -261,7 +261,7 @@ static parseSws(swsPath: string): ParsedSws {
     }
     //get dirname
     const swsDir = path.dirname(resolvedPath);
-    // Read in File Contect
+    // Read in File Content
     const swsContent = fs.readFileSync(resolvedPath, 'utf-8');   
     // Parse as Ini
     const parsedSws = this.parseIni(swsContent);
@@ -325,10 +325,7 @@ static validateParsedWs(
     if (!workspaceSection['appsrcpath']){
         throw new Error('Missing required key "AppSrcPath" in [Workspace] section');
     }
-    //AppHTML : Exists, can access path
-    if (!workspaceSection['apphtmlpath']){
-        throw new Error('Missing required key "AppHtmlPath" in [Workspace] section');
-    }
+    //AppHTML : Optional
     //DdSrcPath : Exists, can access paths   
     if (!workspaceSection['ddsrcpath']){
         throw new Error('Missing required key "DdSrcPath" in [Workspace] section');
@@ -397,8 +394,11 @@ static parseConfigWsContent(configPath: string,configContent: string): ParsedCon
         .split(';')
         .filter(dir => dir.trim() !== '')
         .map(dir => this.resolveRelativePath(resolvedhomeDir, dir));        
-    // AppHtmlPath : Single Path, required for webapps but not 'normal'
-    const resolvedAppHtmlPath = this.resolveRelativePath(resolvedhomeDir, parsedConfigWs['workspace']['apphtmlpath'])
+    // AppHtmlPath : Single Path, optional
+    const rawAppHtmlPath = parsedConfigWs['workspace']['apphtmlpath'];
+    const resolvedAppHtmlPath = rawAppHtmlPath
+        ? this.resolveRelativePath(resolvedhomeDir, rawAppHtmlPath)
+        : '';
     // BitmapPaths : Multiple, Optional
     const resolvedBitMapDirs = parsedConfigWs['workspace']['bitmappath']
         ?.split(';')
@@ -493,17 +493,8 @@ private static checkResolvedConfigWsPaths(config: ParsedConfigWs): void {
     }
 }
 
-/**
- * 
- * @param iniFullText 
- * @returns Record<string, Record<string, string>>
- * 
- * Rules: 
- * 
- */
-static parseConfigWs(configPath: string): ParsedConfigWs {    
-    //return dummy for now
-    var resolvedConfigPath = path.resolve(configPath);
+static parseConfigWs(configPath: string): ParsedConfigWs {
+    const resolvedConfigPath = path.resolve(configPath);
     if (!fs.existsSync(resolvedConfigPath)){
         throw new Error(`Config.ws file not found at path: "${resolvedConfigPath}"`)
     }
