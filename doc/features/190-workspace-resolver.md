@@ -127,8 +127,9 @@ Format: `[ ]` open / `[x]` done. Each line is `[state] YYYY-MM-DD — descriptio
 - [x] 2026-05-14 — Unit tests for `parseIni` (done 2026-05-14)
 - [x] 2026-05-14 — Implement `resolvePath` — normalize Windows backslashes, then `path.resolve(base, relative)` (done 2026-05-14)
 - [x] 2026-05-14 — Tests for `resolvePath` — Windows backslash input on a non-Windows host, mixed separators, already-absolute "relative" path, `..` segments (done 2026-05-14)
-- [ ] 2026-05-14 — Implement `parseSws` — version, conditionals, projectFileNames, configFilePath, source-ordered librarySwsPaths resolved to absolute paths
-- [ ] 2026-05-14 — Tests for `parseSws` — library order matches source order (Lib2 before Lib1 in the file → that order in the output), missing `[Properties]`, missing `ConfigFile`, no `[Libraries]` section
+- [x] 2026-05-14 — Implement `parseSws` — version, conditionals, projectFileNames, configFilePath, source-ordered librarySwsPaths resolved to absolute paths (done 2026-05-14)
+- [x] 2026-05-14 — Implement `validateParsedSws` — required sections/keys, path existence checks for ConfigFile, projects, and libraries (done 2026-05-14)
+- [x] 2026-05-14 — Tests for `parseSws` — library order matches source order (Lib2 before Lib1 in the file → that order in the output), missing `[Properties]`, missing `ConfigFile`, no `[Libraries]` section (done 2026-05-14)
 - [ ] 2026-05-14 — Implement `parseConfigWs` — Home resolution, semicolon-split AppSrcPath/DDSrcPath/DataPath
 - [ ] 2026-05-14 — Tests for `parseConfigWs` — semicolon expansion, absolute DataPath overrides Home, missing `[Workspace]` section
 - [ ] 2026-05-14 — Implement `resolve` — recursive walk with `visited` cycle protection and `depth` tracking
