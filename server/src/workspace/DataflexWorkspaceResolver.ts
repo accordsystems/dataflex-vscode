@@ -170,69 +170,39 @@ static resolveRelativePath(baseDir: string, relativePath: string): string {
 // Project0=WebApp.src
 // Project1=CarmTests.src
 static validateParsedSws(
-    swsPath: string, 
     parsedSws: Record<string, Record<string, string>>
-): asserts parsedSws is ValidatedSwsIni{
+): asserts parsedSws is ValidatedSwsIni {
     //Properties
     const propertiesSection = parsedSws['properties'];
-    if (!propertiesSection) {
+    if (!propertiesSection)
         throw new Error('Missing required [Properties] section');
-    }
-    //Properties : Check Version
-    if (!propertiesSection['version']) {
+    if (!propertiesSection['version'])
         throw new Error('Missing required key "Version" in [Properties] section');
-    }
 
-    //WorkspacePaths: Required: Check Section Exists, then Check ConfigFile exists, is a valid path, can be accessed.
+    //WorkspacePaths
     const workspacePathsSection = parsedSws['workspacepaths'];
-    if (!workspacePathsSection) {
+    if (!workspacePathsSection)
         throw new Error('Missing required [WorkspacePaths] section');
-    }
-    // WorkspacePaths: Check ConfigFile exists and is valid path
-    if (!workspacePathsSection['configfile']) {
-        throw new Error('Missing required key "ConfigFile" in [WorkspacePaths] section');
-    }
-    if (workspacePathsSection['configfile'].trim() === '') {
-        throw new Error('Invalid "ConfigFile" path in [WorkspacePaths] section: cannot be empty or whitespace');
-    }
-    // Resolve ConfigFile path against swsDir and check existence
-    const swsDir = path.dirname(swsPath);
-    const resolvedConfigFilePath = this.resolveRelativePath(swsDir, workspacePathsSection['configfile']);
-    if (!fs.existsSync(resolvedConfigFilePath)) {
-        throw new Error(`Config file not found at path: "${resolvedConfigFilePath}"`);
+    if (!workspacePathsSection['configfile'] || workspacePathsSection['configfile'].trim() === '')
+        throw new Error('Missing or blank required key "ConfigFile" in [WorkspacePaths] section');
+
+    //Projects
+    const projectsSection = parsedSws['projects'];
+    if (!projectsSection)
+        throw new Error('Missing required [Projects] section');
+    if (Object.keys(projectsSection).length === 0)
+        throw new Error('At least one project is required in [Projects] section');
+    for (const [projectKey, projectRelativePath] of Object.entries(projectsSection)) {
+        if (projectRelativePath.trim() === '')
+            throw new Error(`Invalid path for project "${projectKey}" in [Projects] section: cannot be empty or whitespace`);
     }
 
-    //Projects: Check Section Exists. for each key, check uniqueness, valid path, existence. At least 1 project is required. 
-    const projectsSection = parsedSws['projects'];
-    if (!projectsSection) {
-        throw new Error('Missing required [Projects] section');
-    }
-    // Projects: Check for at least 1 project. name doesn't matter, but must be unique
-    const projectKeys = Object.keys(projectsSection)
-    if (projectKeys.length === 0) {
-        throw new Error('At least one project is required in [Projects] section');
-    }
-    //Projects: At least 1 project, no dupes. Check that each project file exists and is valid path
-    for (const [projectKey, projectRelativePath] of Object.entries(projectsSection)) {
-        if (projectRelativePath.trim() === '') {
-            throw new Error(`Invalid path for project "${projectKey}" in [Projects] section: cannot be empty or whitespace`);
-        }
-        const resolvedProjectPath = this.resolveRelativePath(swsDir, projectRelativePath);
-        if (!fs.existsSync(resolvedProjectPath)) {
-            throw new Error(`Project file for "${projectKey}" not found at path: "${resolvedProjectPath}"`);
-        }
-    }    
-    //Check Libraries: Keys must be unique, values must be valid paths if they exist. Libraries are optional, so 0 is valid.
+    //Libraries (optional) — blank values are invalid if the key exists
     const librariesSection = parsedSws['libraries'];
-    if (librariesSection) {                
-        for (const [libraryKey, libraryPath] of Object.entries(librariesSection)){
-            if (libraryPath.trim() === ''){
-                throw new Error(`Invalid library path for library "${libraryKey} in [Libraries] section: cannot be empty or whitespace`)
-            }
-            const resolvedLibraryPath = this.resolveRelativePath(swsDir, libraryPath)
-            if (!fs.existsSync(resolvedLibraryPath)){
-                throw new Error (`library path for "${libraryKey}" does not appear to exist at "${resolvedLibraryPath}`)
-            }            
+    if (librariesSection) {
+        for (const [libraryKey, libraryPath] of Object.entries(librariesSection)) {
+            if (libraryPath.trim() === '')
+                throw new Error(`Invalid library path for library "${libraryKey}" in [Libraries] section: cannot be empty or whitespace`);
         }
     }
 }
@@ -295,34 +265,48 @@ static parseSws(swsPath: string): ParsedSws {
     const swsContent = fs.readFileSync(resolvedPath, 'utf-8');   
     // Parse as Ini
     const parsedSws = this.parseIni(swsContent);
-    // Validate
-    this.validateParsedSws(resolvedPath, parsedSws);    
-    // Fill in Sections into ParsedSws Object and return    
+    // Validate structure
+    this.validateParsedSws(parsedSws);
+    // Build result
     const version = parsedSws['properties']['version'];
     const configFilePath = this.resolveRelativePath(swsDir, parsedSws['workspacepaths'].configfile);
-    const projectSection = parsedSws['projects'];
-    const projectFileNames = Object.values(projectSection);
-    // Optional: Conditionals, library Paths
-    const conditionalSection = parsedSws['conditionals'] ?? {} ;
-    const librariesSection = parsedSws['libraries'];    
-
+    const projectFileNames = Object.values(parsedSws['projects']);
+    const conditionalSection = parsedSws['conditionals'] ?? {};
+    const librariesSection = parsedSws['libraries'];
     const librarySwsPaths = librariesSection
         ? Object.values(librariesSection).map(p => this.resolveRelativePath(swsDir, p))
-        : []   
-    
-    return {
-        swsPath: swsPath,
+        : [];
+    const result: ParsedSws = {
+        swsPath: resolvedPath,
         swsDir: swsDir,
-        version: version, 
+        version: version,
         projectFileNames: projectFileNames,
         conditionals: conditionalSection,
         configFilePath: configFilePath,
-        librarySwsPaths: librarySwsPaths ?? []
+        librarySwsPaths: librarySwsPaths
+    };
+    // Check resolved paths exist on disk
+    this.checkResolvedSwsPaths(result);
+    return result;
+}
+
+private static checkResolvedSwsPaths(sws: ParsedSws): void {
+    if (!fs.existsSync(sws.configFilePath))
+        throw new Error(`Config file not found: "${sws.configFilePath}"`);
+
+    for (const projectFile of sws.projectFileNames) {
+        const resolved = this.resolveRelativePath(sws.swsDir, projectFile);
+        if (!fs.existsSync(resolved))
+            throw new Error(`Project file not found: "${resolved}"`);
+    }
+
+    for (const libPath of sws.librarySwsPaths) {
+        if (!fs.existsSync(libPath))
+            throw new Error(`Library SWS not found: "${libPath}"`);
     }
 }
 
 static validateParsedWs(
-    wsPath: string, 
     parsedWsIni: Record<string, Record<string, string>>
 ): asserts parsedWsIni is ValidatedConfigWsIni{
     //Properties
@@ -400,7 +384,7 @@ static parseConfigWsContent(configPath: string,configContent: string): ParsedCon
     
     
     const parsedConfigWs = this.parseIni(configContent);    
-    this.validateParsedWs(configPath, parsedConfigWs) ;    
+    this.validateParsedWs(parsedConfigWs);
     // Fill in Sections    
     const configDir = path.dirname(configPath);
     // [Workspace]
@@ -461,6 +445,7 @@ static parseConfigWsContent(configPath: string,configContent: string): ParsedCon
         dataDirs: resolvedDataDirs,
         filelistPath: resolvedFileListPath
     }    
+    return result;
 }
 
 private static checkResolvedConfigWsPaths(config: ParsedConfigWs): void {
