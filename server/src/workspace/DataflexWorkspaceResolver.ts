@@ -506,4 +506,78 @@ static parseConfigWs(configPath: string): ParsedConfigWs {
     return result
 }
 // static resolveWorkspace(swsPath: string): ResolvedWorkspace {}
+
+private static resolveNode(
+    swsPath: string,
+    visited: Set<string>,
+    depth: number
+) : ResolvedWorkspace {
+    // 1. Normalize
+    const key = path.resolve(swsPath).toLowerCase();
+
+    if (visited.has(key)){
+        throw new Error(`Cyclic library reference detected: [${swsPath}]`);
+    }
+    visited.add(key);
+
+    // Parse SWS and .WS Config File
+    const sws = this.parseSws(swsPath);
+    const config = this.parseConfigWs(sws.configFilePath);
+
+    //build source file dirs <this ws only>. Recurse into libs later
+    const sourceDirs: ResolvedSourceDir[] = [
+        ...config.appSrcDirs.map(dir => ({ absolutePath: dir, kind: 'appSrc' as SourceKind, swsOrigin: sws.swsPath, depth })),
+        ...config.ddSrcDirs.map(dir => ({ absolutePath: dir, kind: 'ddSrc' as SourceKind, swsOrigin: sws.swsPath, depth })),
+    ]   
+
+    //libs
+    const libraries = sws.librarySwsPaths.map(
+        libPath => this.resolveNode(libPath, visited, depth + 1)
+    );
+    visited.delete(key);
+
+    return {
+        swsPath: sws.swsPath,
+        version : sws.version,
+        conditionals: sws.conditionals,
+        sourceDirs,
+        config,
+        libraries,
+    }
+}
+
+static resolve(swsPath: string): ResolvedWorkspace{
+    return this.resolveNode(swsPath, new Set<string>(), 0);
+}
+
+static flattenSourceDirs(workspace: ResolvedWorkspace): ResolvedSourceDir[]{
+    const seen = new Set<string>();
+    const result: ResolvedSourceDir[] = [];
+
+    function walk(ws: ResolvedWorkspace): void {
+        for (const dir of ws.sourceDirs) {
+            const key = dir.absolutePath.toLowerCase();
+            if (!seen.has(key)) { 
+                seen.add(key); 
+                result.push(dir); 
+            }
+        }
+        for (const lib of ws.libraries) { 
+            walk(lib); 
+        }  // recurse
+    }    
+
+    walk(workspace);
+    return result;
+}
+
+static getAppSrcPaths(workspace: ResolvedWorkspace): string[] {
+    return this.flattenSourceDirs(workspace).filter(d => d.kind === 'appSrc').map(d => d.absolutePath);
+}
+
+static getDdSrcPaths(workspace: ResolvedWorkspace): string[] {
+    return this.flattenSourceDirs(workspace).filter(d => d.kind === 'ddSrc').map(d => d.absolutePath);
+}
+
+
 }
