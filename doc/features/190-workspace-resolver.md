@@ -134,12 +134,12 @@ Format: `[ ]` open / `[x]` done. Each line is `[state] YYYY-MM-DD — descriptio
 - [x] 2026-05-21 — Refactor `validateParsedSws` / `parseSws` to match Config.ws pattern: validate = structure only, `checkResolvedSwsPaths` = disk checks (done 2026-05-21)
 - [x] 2026-05-21 — Implement `validateParsedWs` — structure-only checks, `appHTMLDir` treated as optional (done 2026-05-21)
 - [x] 2026-05-21 — Implement `checkResolvedConfigWsPaths` — required: homeDir, appSrcDirs, ddSrcDirs, programPath, dataDirs, filelistPath; optional: appHTMLDir, bitmapDirs, ideSrcDirs, helpDirs (done 2026-05-21)
-- [ ] 2026-05-21 — Tests for `parseConfigWs` / `parseConfigWsContent` — semicolon expansion, absolute DataPath, missing `[Workspace]` section, optional fields absent
-- [ ] 2026-05-14 — Implement `resolve` — recursive walk with `visited` cycle protection and `depth` tracking
-- [ ] 2026-05-14 — Tests for `resolve` — simple workspace, two-level library, cyclic library reference, missing library file (graceful skip)
-- [ ] 2026-05-14 — Implement `flattenSourceDirs` — depth-first walk, dedup by lowercased absolute path
-- [ ] 2026-05-14 — Tests for `flattenSourceDirs` — shadowing case (same dir in main + library yields one entry attributed to main)
-- [ ] 2026-05-14 — Implement convenience accessors `getAppSrcPaths` / `getDdSrcPaths`
+- [x] 2026-05-21 — Tests for `parseConfigWs` / `parseConfigWsContent` — semicolon expansion, absolute DataPath, missing `[Workspace]` section, optional fields absent (done 2026-05-21)
+- [x] 2026-05-14 — Implement `resolve` — recursive walk with `visited` cycle protection and `depth` tracking (done 2026-05-22)
+- [x] 2026-05-14 — Tests for `resolve` — simple workspace, two-level library, cyclic library reference, missing library file (done 2026-05-22)
+- [x] 2026-05-14 — Implement `flattenSourceDirs` — depth-first walk, dedup by lowercased absolute path (done 2026-05-22)
+- [x] 2026-05-14 — Tests for `flattenSourceDirs` — shadowing case (same dir in main + library yields one entry attributed to main) (done 2026-05-22)
+- [x] 2026-05-14 — Implement convenience accessors `getAppSrcPaths` / `getDdSrcPaths` (done 2026-05-22)
 - [ ] 2026-05-14 — Add `dataflex.workspace.swsFile` to `package.json` `contributes.configuration.properties`
 - [ ] 2026-05-14 — Wire `connection.onInitialized` to read the setting and call the resolver
 - [ ] 2026-05-14 — Wire `connection.onDidChangeConfiguration` to re-resolve when the setting changes

@@ -438,6 +438,61 @@ class DataflexWorkspaceResolver {
         this.checkResolvedConfigWsPaths(result);
         return result;
     }
+    // static resolveWorkspace(swsPath: string): ResolvedWorkspace {}
+    static resolveNode(swsPath, visited, depth) {
+        // 1. Normalize
+        const key = path.resolve(swsPath).toLowerCase();
+        if (visited.has(key)) {
+            throw new Error(`Cyclic library reference detected: [${swsPath}]`);
+        }
+        visited.add(key);
+        // Parse SWS and .WS Config File
+        const sws = this.parseSws(swsPath);
+        const config = this.parseConfigWs(sws.configFilePath);
+        //build source file dirs <this ws only>. Recurse into libs later
+        const sourceDirs = [
+            ...config.appSrcDirs.map(dir => ({ absolutePath: dir, kind: 'appSrc', swsOrigin: sws.swsPath, depth })),
+            ...config.ddSrcDirs.map(dir => ({ absolutePath: dir, kind: 'ddSrc', swsOrigin: sws.swsPath, depth })),
+        ];
+        //libs
+        const libraries = sws.librarySwsPaths.map(libPath => this.resolveNode(libPath, visited, depth + 1));
+        visited.delete(key);
+        return {
+            swsPath: sws.swsPath,
+            version: sws.version,
+            conditionals: sws.conditionals,
+            sourceDirs,
+            config,
+            libraries,
+        };
+    }
+    static resolve(swsPath) {
+        return this.resolveNode(swsPath, new Set(), 0);
+    }
+    static flattenSourceDirs(workspace) {
+        const seen = new Set();
+        const result = [];
+        function walk(ws) {
+            for (const dir of ws.sourceDirs) {
+                const key = dir.absolutePath.toLowerCase();
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    result.push(dir);
+                }
+            }
+            for (const lib of ws.libraries) {
+                walk(lib);
+            } // recurse
+        }
+        walk(workspace);
+        return result;
+    }
+    static getAppSrcPaths(workspace) {
+        return this.flattenSourceDirs(workspace).filter(d => d.kind === 'appSrc').map(d => d.absolutePath);
+    }
+    static getDdSrcPaths(workspace) {
+        return this.flattenSourceDirs(workspace).filter(d => d.kind === 'ddSrc').map(d => d.absolutePath);
+    }
 }
 exports.DataflexWorkspaceResolver = DataflexWorkspaceResolver;
 //# sourceMappingURL=DataflexWorkspaceResolver.js.map

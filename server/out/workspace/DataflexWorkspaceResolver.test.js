@@ -461,5 +461,163 @@ const DataflexWorkspaceResolver_1 = require("./DataflexWorkspaceResolver");
             assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.parseConfigWs(configPath));
         });
     });
+    (0, mocha_1.describe)('resolve', () => {
+        const norm = (p) => p.replace(/\\/g, '/');
+        let tempDir;
+        // Creates a minimal but fully valid DataFlex workspace at wsDir.
+        // Returns the absolute path to the .sws file.
+        // libPaths: absolute paths to library .sws files to reference in [Libraries].
+        function buildWorkspace(wsDir, opts = {}) {
+            const { name = 'workspace', version = '19.1', libPaths = [] } = opts;
+            for (const dir of ['AppSrc', 'DDSrc', 'Programs', 'Data']) {
+                fs.mkdirSync(path.join(wsDir, dir), { recursive: true });
+            }
+            fs.writeFileSync(path.join(wsDir, 'Data', 'filelist.cfg'), '');
+            fs.writeFileSync(path.join(wsDir, 'Main.src'), '');
+            const configContent = [
+                '[Workspace]',
+                'Home=..',
+                'AppSrcPath=.\\AppSrc',
+                'DDSrcPath=.\\DDSrc',
+                'ProgramPath=.\\Programs',
+                'DataPath=.\\Data',
+                'FileList=.\\Data\\filelist.cfg',
+            ].join('\n');
+            fs.writeFileSync(path.join(wsDir, 'Programs', 'Config.ws'), configContent);
+            const libEntries = libPaths.map((absLibPath, i) => {
+                const rel = path.relative(wsDir, absLibPath).replace(/\//g, '\\');
+                return `Lib${i}=${rel}`;
+            });
+            const swsLines = [
+                '[Properties]',
+                `Version=${version}`,
+                '[WorkspacePaths]',
+                'ConfigFile=.\\Programs\\Config.ws',
+                '[Projects]',
+                'Project0=Main.src',
+                ...(libEntries.length > 0 ? ['[Libraries]', ...libEntries] : []),
+                '',
+            ];
+            const swsFilePath = path.join(wsDir, `${name}.sws`);
+            fs.writeFileSync(swsFilePath, swsLines.join('\n'));
+            return swsFilePath;
+        }
+        (0, mocha_1.beforeEach)(() => {
+            tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'resolve-'));
+        });
+        (0, mocha_1.afterEach)(() => {
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        });
+        (0, mocha_1.it)('resolves a simple workspace with no libraries', () => {
+            const swsPath = buildWorkspace(path.join(tempDir, 'main'));
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.resolve(swsPath);
+            assert_1.strict.equal(result.version, '19.1');
+            assert_1.strict.equal(norm(result.swsPath), norm(swsPath));
+            assert_1.strict.equal(result.libraries.length, 0);
+        });
+        (0, mocha_1.it)('sourceDirs contains appSrc and ddSrc entries at depth 0 with correct swsOrigin', () => {
+            const swsPath = buildWorkspace(path.join(tempDir, 'main'));
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.resolve(swsPath);
+            const appSrc = result.sourceDirs.filter(d => d.kind === 'appSrc');
+            const ddSrc = result.sourceDirs.filter(d => d.kind === 'ddSrc');
+            assert_1.strict.equal(appSrc.length, 1);
+            assert_1.strict.equal(ddSrc.length, 1);
+            assert_1.strict.ok(result.sourceDirs.every(d => d.depth === 0));
+            assert_1.strict.ok(result.sourceDirs.every(d => norm(d.swsOrigin) === norm(swsPath)));
+        });
+        (0, mocha_1.it)('resolves a workspace with one library — library sourceDirs have depth 1', () => {
+            const libSws = buildWorkspace(path.join(tempDir, 'lib'), { name: 'lib' });
+            const mainSws = buildWorkspace(path.join(tempDir, 'main'), { libPaths: [libSws] });
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.resolve(mainSws);
+            assert_1.strict.equal(result.libraries.length, 1);
+            assert_1.strict.ok(result.libraries[0].sourceDirs.every(d => d.depth === 1));
+        });
+        (0, mocha_1.it)('resolves a diamond dependency (two parents share one library) without throwing', () => {
+            const sharedSws = buildWorkspace(path.join(tempDir, 'shared'), { name: 'shared' });
+            const libASws = buildWorkspace(path.join(tempDir, 'libA'), { name: 'libA', libPaths: [sharedSws] });
+            const libBSws = buildWorkspace(path.join(tempDir, 'libB'), { name: 'libB', libPaths: [sharedSws] });
+            const mainSws = buildWorkspace(path.join(tempDir, 'main'), { libPaths: [libASws, libBSws] });
+            assert_1.strict.doesNotThrow(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.resolve(mainSws));
+        });
+        (0, mocha_1.it)('throws on a cyclic library reference', () => {
+            // Build libB first (no libs), then libA referencing libB.
+            // Patch libB.sws to back-reference libA, creating the cycle A→B→A.
+            const libADir = path.join(tempDir, 'libA');
+            const libBDir = path.join(tempDir, 'libB');
+            const libBSws = buildWorkspace(libBDir, { name: 'libB' });
+            const libASws = buildWorkspace(libADir, { name: 'libA', libPaths: [libBSws] });
+            const libARelFromLibB = path.relative(libBDir, libASws).replace(/\//g, '\\');
+            fs.writeFileSync(libBSws, [
+                '[Properties]', 'Version=19.1',
+                '[WorkspacePaths]', 'ConfigFile=.\\Programs\\Config.ws',
+                '[Projects]', 'Project0=Main.src',
+                '[Libraries]', `Lib0=${libARelFromLibB}`,
+                '',
+            ].join('\n'));
+            const mainSws = buildWorkspace(path.join(tempDir, 'main'), { libPaths: [libASws] });
+            assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.resolve(mainSws), /cyclic/i);
+        });
+        (0, mocha_1.it)('throws when a referenced library sws file does not exist', () => {
+            const nonexistentLib = path.join(tempDir, 'missing', 'missing.sws');
+            const mainSws = buildWorkspace(path.join(tempDir, 'main'), { libPaths: [nonexistentLib] });
+            assert_1.strict.throws(() => DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.resolve(mainSws));
+        });
+    });
+    (0, mocha_1.describe)('flattenSourceDirs', () => {
+        function makeDir(absolutePath, kind, swsOrigin = 'ws.sws', depth = 0) {
+            return { absolutePath, kind, swsOrigin, depth };
+        }
+        function makeWs(sourceDirs, libraries = []) {
+            return { swsPath: 'ws.sws', version: '19.1', conditionals: {}, sourceDirs, config: {}, libraries };
+        }
+        (0, mocha_1.it)('returns all source dirs for a workspace with no libraries', () => {
+            const ws = makeWs([makeDir('/app/AppSrc', 'appSrc'), makeDir('/app/DDSrc', 'ddSrc')]);
+            assert_1.strict.equal(DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.flattenSourceDirs(ws).length, 2);
+        });
+        (0, mocha_1.it)('main workspace dirs appear before library dirs', () => {
+            const lib = makeWs([makeDir('/lib/AppSrc', 'appSrc', 'lib.sws', 1)]);
+            const main = makeWs([makeDir('/main/AppSrc', 'appSrc')], [lib]);
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.flattenSourceDirs(main);
+            assert_1.strict.equal(result[0].absolutePath, '/main/AppSrc');
+            assert_1.strict.equal(result[1].absolutePath, '/lib/AppSrc');
+        });
+        (0, mocha_1.it)('deduplicates a shared directory — first occurrence (main) wins', () => {
+            const shared = '/shared/AppSrc';
+            const lib = makeWs([makeDir(shared, 'appSrc', 'lib.sws', 1)]);
+            const main = makeWs([makeDir(shared, 'appSrc')], [lib]);
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.flattenSourceDirs(main);
+            assert_1.strict.equal(result.length, 1);
+            assert_1.strict.equal(result[0].depth, 0);
+        });
+        (0, mocha_1.it)('deduplication is case-insensitive', () => {
+            const lib = makeWs([makeDir('C:\\App\\APPSRC', 'appSrc', 'lib.sws', 1)]);
+            const main = makeWs([makeDir('C:\\App\\AppSrc', 'appSrc')], [lib]);
+            assert_1.strict.equal(DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.flattenSourceDirs(main).length, 1);
+        });
+        (0, mocha_1.it)('flattens a two-level library tree in depth-first order', () => {
+            const lib2 = makeWs([makeDir('/lib2/AppSrc', 'appSrc', 'lib2.sws', 2)]);
+            const lib1 = makeWs([makeDir('/lib1/AppSrc', 'appSrc', 'lib1.sws', 1)], [lib2]);
+            const main = makeWs([makeDir('/main/AppSrc', 'appSrc')], [lib1]);
+            const result = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.flattenSourceDirs(main);
+            assert_1.strict.deepEqual(result.map(d => d.absolutePath), ['/main/AppSrc', '/lib1/AppSrc', '/lib2/AppSrc']);
+        });
+    });
+    (0, mocha_1.describe)('getAppSrcPaths and getDdSrcPaths', () => {
+        const ws = {
+            swsPath: 'ws.sws', version: '19.1', conditionals: {},
+            config: {}, libraries: [],
+            sourceDirs: [
+                { absolutePath: '/app/AppSrc', kind: 'appSrc', swsOrigin: 'ws.sws', depth: 0 },
+                { absolutePath: '/app/DDSrc', kind: 'ddSrc', swsOrigin: 'ws.sws', depth: 0 },
+                { absolutePath: '/app/DDSrc2', kind: 'ddSrc', swsOrigin: 'ws.sws', depth: 0 },
+            ],
+        };
+        (0, mocha_1.it)('getAppSrcPaths returns only appSrc absolute paths', () => {
+            assert_1.strict.deepEqual(DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.getAppSrcPaths(ws), ['/app/AppSrc']);
+        });
+        (0, mocha_1.it)('getDdSrcPaths returns only ddSrc absolute paths', () => {
+            assert_1.strict.deepEqual(DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.getDdSrcPaths(ws), ['/app/DDSrc', '/app/DDSrc2']);
+        });
+    });
 });
 //# sourceMappingURL=DataflexWorkspaceResolver.test.js.map
