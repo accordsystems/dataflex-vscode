@@ -44,7 +44,7 @@ If a design decision genuinely changes, update the body of the file directly; do
 | 100 | [Go to Definition](./100-gotodefinition.md) | 🔨 | Infrastructure done; `buildSymbolIndex` is a stub, no workspace scan yet |
 | 110 | Go to Declaration | ⬜ | Shares resolver with 100 |
 | 120 | Document Symbols (Outline) | ✅ | `client/src/outline/dataflexDocumentSymbolProvider.ts` |
-| 190 | [Workspace Resolver](./190-workspace-resolver.md) | 🔨 | `parseIni`, `resolvePath`, `validateParsedSws`, `parseSws` done with tests. `parseConfigWs`, `resolve`, `flattenSourceDirs` not started. Prerequisite for 200. |
+| 190 | [Workspace Resolver](./190-workspace-resolver.md) | ✅ | All parsing, resolution, flattening, and server wiring complete. Prerequisite for 200. |
 | 200 | Workspace Symbol Index | ⬜ | Depends on 190. Prerequisite for 100 (cross-file), 210, 300, 310 |
 | 210 | Workspace Symbol Search (Ctrl+T) | ⬜ | Depends on 200 |
 | 300 | Find All References | ⬜ | Depends on 200 |

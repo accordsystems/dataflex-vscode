@@ -38,7 +38,7 @@ Lib3=libs\DataFlex Conversions Library 24.0\Conversions - 191.sws
 Key observations:
 - `ConfigFile` is relative to the **SWS file directory**.
 - Library values (`Lib1`, `Lib2`, ...) are relative to the **SWS file directory**.
-- Library keys must be sorted **numerically** (Lib1, Lib2, Lib10 — not lexicographically).
+- Library keys appear in the file in source order; that order is preserved directly. JavaScript object key insertion order makes this automatic — no sort needed.
 - Libraries can themselves have libraries (recursive, potentially deep).
 
 ### Config.ws file (Windows INI)
@@ -107,9 +107,10 @@ export interface ParsedSws {
     swsPath: string;
     swsDir: string;
     version: string;
+    projectFileNames: string[];  // Relative paths of .src entry points (Project0=, Project1=, ...)
     conditionals: Record<string, string>;
     configFilePath: string;
-    librarySwsPaths: string[];  // Sorted Lib1, Lib2, ...
+    librarySwsPaths: string[];  // Source order — matches declaration order in the [Libraries] section
 }
 
 export interface ParsedConfigWs {
@@ -117,8 +118,8 @@ export interface ParsedConfigWs {
     homeDir: string;
     appSrcDirs: string[];   // Resolved absolute paths
     ddSrcDirs: string[];    // Resolved absolute paths (expanded from semicolons)
-    dataPath: string;
-    fileListPath: string;
+    dataDirs: string[];     // Resolved absolute paths (expanded from semicolons; may be absolute)
+    filelistPath: string;
 }
 
 export interface ResolvedWorkspace {
@@ -173,11 +174,9 @@ private static resolvePath(base: string, relative: string): string
 Steps:
 1. Read file, call `parseIni`.
 2. Extract `version` from `[Properties].Version`.
-3. Extract `conditionals` from `[Conditionals]` section.
+3. Extract `projectFileNames` from `[Projects]`: collect values in source order, resolve each path against `swsDir`.
 4. Resolve `configFilePath` using `[WorkspacePaths].ConfigFile` relative to `swsDir`.
-5. Extract library paths from `[Libraries]`: sort keys numerically, resolve each path.
-
-Numeric sort example: `['Lib3', 'Lib1', 'Lib10', 'Lib2']` → `['Lib1', 'Lib2', 'Lib3', 'Lib10']`
+5. Extract library paths from `[Libraries]`: collect values in source order (insertion order of the parsed section object), resolve each path.
 
 ```typescript
 static parseSws(swsPath: string): ParsedSws
@@ -195,8 +194,8 @@ Steps:
 2. Resolve `homeDir` = `resolvePath(configDir, ini['Workspace']['Home'])`.
 3. `appSrcDirs` = split `AppSrcPath` on `;`, resolve each against `homeDir`.
 4. `ddSrcDirs` = split `DDSrcPath` on `;`, resolve each against `homeDir`.
-5. `dataPath` = resolve `DataPath` against `homeDir` (may already be absolute — `path.resolve` handles this).
-6. `fileListPath` = resolve `FileList` against `homeDir`.
+5. `dataDirs` = split `DataPath` on `;`, resolve each against `homeDir` (segments may already be absolute — `path.resolve` handles this).
+6. `filelistPath` = resolve `FileList` against `homeDir`.
 
 ```typescript
 static parseConfigWs(configPath: string): ParsedConfigWs

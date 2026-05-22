@@ -6,6 +6,7 @@ const DataflexCodeActions_1 = require("./codeActions/DataflexCodeActions");
 const DataFlexValidator_1 = require("./validation/DataFlexValidator");
 const SymbolIndexBuilder_1 = require("./Symbols/SymbolIndexBuilder");
 const DefinitionFinder_1 = require("./Definitions/DefinitionFinder");
+const DataflexWorkspaceResolver_1 = require("./workspace/DataflexWorkspaceResolver");
 //not yet implemented
 //const symbolIndex = new SymbolIndexBuilder(); // updates symbol index, finds definitions
 const definitionFinder = new DefinitionFinder_1.DefinitionFinder(); // finds definitions
@@ -55,10 +56,12 @@ connection.onInitialize((params) => {
     }
     return result;
 });
-connection.onInitialized(() => {
+let resolvedWorkspace = null;
+connection.onInitialized(async () => {
     if (hasConfigurationCapability) {
         // Register for all configuration changes.
         connection.client.register(node_1.DidChangeConfigurationNotification.type, undefined);
+        await resolveWorkspace();
     }
     if (hasWorkspaceFolderCapability) {
         connection.workspace.onDidChangeWorkspaceFolders(_event => {
@@ -66,6 +69,18 @@ connection.onInitialized(() => {
         });
     }
 });
+async function resolveWorkspace() {
+    const swsFile = await connection.workspace.getConfiguration('dataflex.workspace.swsFile');
+    if (!swsFile)
+        return;
+    try {
+        resolvedWorkspace = DataflexWorkspaceResolver_1.DataflexWorkspaceResolver.resolve(swsFile);
+        connection.console.log(`[WorkspaceResolver] Resolved: ${resolvedWorkspace.swsPath}`);
+    }
+    catch (e) {
+        connection.console.warn(`[WorkspaceResolver] ${e.message}`);
+    }
+}
 // The global settings, used when the `workspace/configuration` request is not supported by the client.
 // Please note that this is not the case when using this server with the client provided in this example
 // but could happen with other clients.
@@ -74,18 +89,11 @@ connection.onInitialized(() => {
 //let globalSettings: ExampleSettings = defaultSettings;
 // Cache the settings of all open documents
 let documentSettings = new Map();
-// connection.onDidChangeConfiguration(change => {
-//   if (hasConfigurationCapability) {
-//     // Reset all cached document settings
-//     documentSettings.clear();
-//   } else {
-//     globalSettings = <ExampleSettings>(
-//       (change.settings.languageServerExample || defaultSettings)
-//     );
-//   }
-//     // Revalidate all open text documents
-//   documents.all().forEach(validateTextDocument);
-// });
+connection.onDidChangeConfiguration(async () => {
+    if (!hasConfigurationCapability)
+        return;
+    await resolveWorkspace();
+});
 // Not yet implemented, but this is where we would handle file changes that are relevant to the workspace, such as .sws or config files, and trigger a workspace re-resolution and re-validation of all documents if needed
 // function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
 //   if (!hasConfigurationCapability) {

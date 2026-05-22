@@ -44,3 +44,29 @@ Our client launches the server with `TransportKind.ipc`, so the patch never runs
 ### Why deferred
 
 Not a correctness issue. The logs work fine under tests (the primary current consumer) and the runtime case isn't broken, just sub-optimally surfaced. Revisit when either (a) the logs become noisy in tests, or (b) someone needs to debug a runtime issue and notices the logs aren't where they expect.
+
+---
+
+## 002 — `dataflex.workspace.swsFile` should be selectable from the VS Code status bar
+
+**Status:** Open
+**Added:** 2026-05-22
+**Files:** [client/src/extension.ts](../client/src/extension.ts), [package.json](../package.json)
+
+### Issue
+
+`dataflex.workspace.swsFile` is currently a plain string setting that must be typed manually in Settings UI or `settings.json`. For workspaces that contain multiple `.sws` files (e.g. `cI20 - x64 Compile.sws` alongside `cAcm - x64 Compile.sws`) this is cumbersome to switch.
+
+The desired UX is a status bar item (bottom-right, similar to the language mode or branch picker) that shows the basename of the active `.sws` file and opens a Quick Pick when clicked, letting the user select from `.sws` files discovered in the current workspace folders.
+
+### Implementation sketch
+
+1. In `extension.ts`, create a `vscode.StatusBarItem` (alignment `Right`, priority low).
+2. Populate the Quick Pick by running `vscode.workspace.findFiles('**/*.sws', null, 20)`.
+3. On selection, write the chosen path back to `vscode.workspace.getConfiguration('dataflex').update('workspace.swsFile', ...)`.
+4. Listen to `vscode.workspace.onDidChangeConfiguration` to refresh the status bar label whenever the setting changes externally.
+5. Dispose the item in the extension's `deactivate`.
+
+### Why deferred
+
+Manual entry is sufficient for current single-workspace usage. Implement when switching between `.sws` files becomes a frequent workflow.

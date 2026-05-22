@@ -24,6 +24,7 @@ import { DataFlexValidator } from './validation/DataFlexValidator';
 import { Location, Position, Range } from 'vscode-languageserver/node'; // Added for Definition Support
 import { SymbolIndexBuilder } from './Symbols/SymbolIndexBuilder';
 import { DefinitionFinder } from './Definitions/DefinitionFinder';
+import { DataflexWorkspaceResolver, ResolvedWorkspace } from './workspace/DataflexWorkspaceResolver';
 
 //not yet implemented
 //const symbolIndex = new SymbolIndexBuilder(); // updates symbol index, finds definitions
@@ -87,17 +88,34 @@ connection.onInitialize((params: InitializeParams) => {
   return result;
 });
 
-connection.onInitialized(() => {
+let resolvedWorkspace: ResolvedWorkspace | null = null;
+
+connection.onInitialized(async () => {
   if (hasConfigurationCapability) {
     // Register for all configuration changes.
     connection.client.register(DidChangeConfigurationNotification.type, undefined);
+    await resolveWorkspace();
   }
   if (hasWorkspaceFolderCapability) {
     connection.workspace.onDidChangeWorkspaceFolders(_event => {
       connection.console.log('Workspace folder change event received.');
     });
   }
+  
+
 });
+
+async function resolveWorkspace(): Promise<void> {
+  const swsFile = await connection.workspace.getConfiguration('dataflex.workspace.swsFile')
+  if (!swsFile) return;
+  try {
+    resolvedWorkspace = DataflexWorkspaceResolver.resolve(swsFile);        
+    connection.console.log(`[WorkspaceResolver] Resolved: ${resolvedWorkspace.swsPath}`);
+  }
+  catch (e) {
+    connection.console.warn(`[WorkspaceResolver] ${(e as Error).message}`)
+  }
+}
 
 // The example settings
 interface ExampleSettings {
@@ -115,18 +133,10 @@ interface ExampleSettings {
 // Cache the settings of all open documents
 let documentSettings: Map<string, Thenable<ExampleSettings>> = new Map();
 
-// connection.onDidChangeConfiguration(change => {
-//   if (hasConfigurationCapability) {
-//     // Reset all cached document settings
-//     documentSettings.clear();
-//   } else {
-//     globalSettings = <ExampleSettings>(
-//       (change.settings.languageServerExample || defaultSettings)
-//     );
-//   }
-//     // Revalidate all open text documents
-//   documents.all().forEach(validateTextDocument);
-// });
+connection.onDidChangeConfiguration(async () => {
+    if (!hasConfigurationCapability) return;
+    await resolveWorkspace();
+});
 
 // Not yet implemented, but this is where we would handle file changes that are relevant to the workspace, such as .sws or config files, and trigger a workspace re-resolution and re-validation of all documents if needed
 // function getDocumentSettings(resource: string): Thenable<ExampleSettings> {

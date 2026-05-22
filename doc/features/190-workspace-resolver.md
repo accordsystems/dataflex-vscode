@@ -1,6 +1,6 @@
 # Feature 190 — Workspace Resolver
 
-**Status:** In Progress
+**Status:** Done
 
 ## Goal
 
@@ -140,9 +140,11 @@ Format: `[ ]` open / `[x]` done. Each line is `[state] YYYY-MM-DD — descriptio
 - [x] 2026-05-14 — Implement `flattenSourceDirs` — depth-first walk, dedup by lowercased absolute path (done 2026-05-22)
 - [x] 2026-05-14 — Tests for `flattenSourceDirs` — shadowing case (same dir in main + library yields one entry attributed to main) (done 2026-05-22)
 - [x] 2026-05-14 — Implement convenience accessors `getAppSrcPaths` / `getDdSrcPaths` (done 2026-05-22)
-- [ ] 2026-05-14 — Add `dataflex.workspace.swsFile` to `package.json` `contributes.configuration.properties`
-- [ ] 2026-05-14 — Wire `connection.onInitialized` to read the setting and call the resolver
-- [ ] 2026-05-14 — Wire `connection.onDidChangeConfiguration` to re-resolve when the setting changes
-- [ ] 2026-05-14 — Update `workspace-resolver-plan.md` to match drift: `projectFileNames` in `ParsedSws`, `dataDirs: string[]` (not `dataPath: string`), pick one casing for `filelistPath`, library order is source order not numeric sort
+- [x] 2026-05-14 — Add `dataflex.workspace.swsFile` to `package.json` `contributes.configuration.properties`
+- [x] 2026-05-22 — Wire `connection.onInitialized` to read `dataflex.workspace.swsFile` and call the resolver; skip silently if `hasConfigurationCapability` is false or the setting is blank (done 2026-05-22)
+- [x] 2026-05-22 — Wire `connection.onDidChangeConfiguration` to re-resolve when the setting changes; skip if `hasConfigurationCapability` is false (done 2026-05-22)
+- [x] 2026-05-14 — Update `workspace-resolver-plan.md` to match drift: `projectFileNames` in `ParsedSws`, `dataDirs: string[]` (not `dataPath: string`), pick one casing for `filelistPath`, library order is source order not numeric sort (done 2026-05-22)
 
 Note: routing of `console.log` calls in `parseIni` is now tracked in [../maintenance.md](../maintenance.md#001--consolelog-in-server-code-is-not-routed-to-the-lsp-output-channel-under-ipc-transport) — not a 190-specific issue.
+
+Note: making `dataflex.workspace.swsFile` a status-bar switcher is tracked in [../maintenance.md](../maintenance.md#002--dataflexworkspaceswsfile-should-be-selectable-from-the-vs-code-status-bar).
