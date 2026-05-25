@@ -19,8 +19,7 @@ export type DataFlexSymbolType = keyof typeof DataFlexSymbols;
 export interface SymbolDefinition {
     name: string;
     type: DataFlexSymbolType;
-    location: Location;
-    documentUri: string;
+    location: Location;    
     visibility: 'public' | 'private' | 'protected' | 'global';
     scope: ScopeInfo; // The scope in which this symbol is defined
 }

@@ -5,7 +5,16 @@ import { DATAFLEX_SCOPE_BEGIN_SYMBOLS,
     DATAFLEX_SCOPE_TYPES, 
     ScopeInfo,
     ScopeFactory } from '../common/dataflexScopes';
-import { SymbolDefinition } from '../Symbols/dataflexSymbols';
+import { DataFlexSymbolType, SymbolDefinition } from '../Symbols/dataflexSymbols';
+import { Location, Range } from 'vscode-languageserver';
+
+const SYMBOL_PATTERNS : [RegExp, DataFlexSymbolType][] = [
+    [/^\s*Procedure\s+(\w+)/i, 'procedure'],
+    [/^\s*Function\s+(\w+)/i, 'function'],
+    [/^\s*Class\s+(\w+)/i, 'class'],
+    [/^\s*Object\s+(\w+)/i, 'object'],
+    [/^\s*#DEFINE\s+(\w+)/i, 'define'],
+]
 
 
 export interface DocumentSymbolIndex {
@@ -25,9 +34,36 @@ export class SymbolIndexBuilder {
     }    
 
     // Placeholder for symbol extraction logic. For now, it returns an empty array.
-    private static buildSymbolIndex(_lines: string[], _documentUri: string, _scopes: ScopeInfo[]): SymbolDefinition[] {
+    private static buildSymbolIndex(lines: string[], documentUri: string, scopes: ScopeInfo[]): SymbolDefinition[] {
         const symbols: SymbolDefinition[] = [];
-        // Placeholder for symbol extraction logic
+
+        //iterate through lines, testing SYMBOL_PATTERNS
+        lines.forEach((lineText, lineNumber) => {
+            for (const [regex, type] of SYMBOL_PATTERNS) {
+                const match = lineText.match(regex)
+                if (match){
+                    if (!match?.[1]) break;
+                    const name = match[1];                    
+                    const scope = this.getInnermostScope(scopes, lineNumber);
+                    const location : Location = {
+                        range: {
+                            start: {line : lineNumber, character: 0},
+                            end: {line: lineNumber, character: lineText.length} 
+                        } as Range,
+                        uri : documentUri
+                    } as Location
+                    const symbol : SymbolDefinition = {
+                        location: location,
+                        name: name,
+                        scope: scope,
+                        type: type,
+                        visibility: 'public' //default to public for now
+                    } 
+                    symbols.push(symbol);
+                    break
+                }
+            }
+        }) 
         return symbols;
     }
 
@@ -82,14 +118,28 @@ export class SymbolIndexBuilder {
     }
     //#endregion
     
-    
+    private static getInnermostScope(scopes: ScopeInfo[], lineNumber: number): ScopeInfo
+    {
+        const filteredScopes = scopes.filter(s => 
+            s.startLine <= lineNumber && 
+            (s.endLine === -1 || s.endLine >= lineNumber) //scope is either open (global) or ends after the line number
+        )
+        //return scope with greatest start line (innermost). There should always be a global scope.
+        const innermost = filteredScopes.reduce((deepest, current) => 
+            current.startLine > deepest.startLine ? current: deepest
+        );
+        // If the innermost scope starts at this exact line and has a parent, the symbol
+        // is being declared INTO this scope — attribute it to the containing (parent) scope instead.
+        if (innermost.startLine === lineNumber && innermost.parentScope) {
+            return innermost.parentScope;
+        }
+        return innermost;
+    }
 }
     
 //Todo: Build Scope Hierarchy
 
 //Todo: Index Symbols within Scopes
-
-//Todo: Get the Scope at the Current Line
 
 //Todo: Add Symbol to Index
 

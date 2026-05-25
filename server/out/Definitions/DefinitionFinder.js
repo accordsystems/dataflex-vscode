@@ -21,7 +21,7 @@ class DefinitionFinder {
         this.documentScopes.set(uri, documentIndex.scopes);
         for (const symbol of documentIndex.symbols) {
             //Derive a key for the symbol
-            const key = (symbol.name + '|' + symbol.type + '|' + symbol.documentUri + '|' + symbol.location.range.start.line).toLowerCase();
+            const key = (symbol.name + '|' + symbol.type + '|' + symbol.location.uri + '|' + symbol.location.range.start.line).toLowerCase();
             if (!this.symbolIndex.has(key)) {
                 this.symbolIndex.set(key, []);
             }
@@ -41,7 +41,7 @@ class DefinitionFinder {
     //Todo: Expand to Workspace
     isSymbolAccessible(symbol, requestScope, requestUri) {
         // Same document and same or child scope
-        if (symbol.documentUri === requestUri &&
+        if (symbol.location.uri === requestUri &&
             this.isSameOrChildScope(requestScope, symbol.scope)) {
             return true;
         }
@@ -74,7 +74,7 @@ class DefinitionFinder {
     }
     clearDocumentSymbols(uri) {
         this.symbolIndex.forEach((symbols, key) => {
-            this.symbolIndex.set(key, symbols.filter(s => s.documentUri !== uri));
+            this.symbolIndex.set(key, symbols.filter(s => s.location.uri !== uri));
         });
         this.documentScopes.delete(uri);
     }
