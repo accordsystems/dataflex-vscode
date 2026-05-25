@@ -1,6 +1,6 @@
 # Feature 200 — Workspace Symbol Index
 
-**Status:** In Progress
+**Status:** In Progress — `buildSymbolIndex` complete and tested; `WorkspaceIndex` next
 
 ## Goal
 
@@ -138,11 +138,20 @@ On SWS change (`resolveWorkspace` re-runs): call `WorkspaceIndex.instance.clear(
 
 Format: `[ ]` open / `[x]` done. Each line is `[state] YYYY-MM-DD — description` and a done line appends `(done YYYY-MM-DD)`.
 
-- [ ] 2026-05-22 — Implement `buildSymbolIndex` in `SymbolIndexBuilder` — extract Procedure, Function, Class, Object, Define with line/location
-- [ ] 2026-05-22 — Unit tests for `buildSymbolIndex` — each symbol type, case-insensitive match, scope attribution
-- [ ] 2026-05-22 — Create `WorkspaceIndex` singleton with `indexFile`, `indexWorkspace`, `clearFile`, `clear`, `findByName`, `findByFile`
-- [ ] 2026-05-22 — Unit tests for `WorkspaceIndex` — indexFile adds symbols, clearFile removes them, findByName is case-insensitive, shadowed file (same symbol in two files) returns both
-- [ ] 2026-05-22 — Wire `server.ts` to trigger background `indexWorkspace` after `resolveWorkspace` succeeds
-- [ ] 2026-05-22 — Wire `server.ts` to call `WorkspaceIndex.instance.clear()` before re-resolving on SWS change
-- [ ] 2026-05-22 — Refactor `DefinitionFinder` to query `WorkspaceIndex` instead of its own symbol map
-- [ ] 2026-05-22 — Unit tests for refactored `DefinitionFinder` — cross-file definition found, open-doc symbol found, unknown symbol returns empty
+- [x] 2026-05-22 — Implement `buildSymbolIndex` in `SymbolIndexBuilder` — extract Procedure, Function, Class, Object, Define with line/location (done 2026-05-25)
+- [x] 2026-05-22 — Unit tests for `buildSymbolIndex` — each symbol type, case-insensitive match, scope attribution (done 2026-05-25)
+- [ ] 2026-05-25 — Create `WorkspaceIndex` singleton with `indexFile`, `indexWorkspace`, `clearFile`, `clear`, `findByName`, `findByFile`
+- [ ] 2026-05-25 — Unit tests for `WorkspaceIndex` — indexFile adds symbols, clearFile removes them, findByName is case-insensitive, shadowed file (same symbol in two files) returns both
+- [ ] 2026-05-25 — Wire `server.ts` to trigger background `indexWorkspace` after `resolveWorkspace` succeeds
+- [ ] 2026-05-25 — Wire `server.ts` to call `WorkspaceIndex.instance.clear()` before re-resolving on SWS change
+- [ ] 2026-05-25 — Refactor `DefinitionFinder` to query `WorkspaceIndex` instead of its own symbol map
+- [ ] 2026-05-25 — Unit tests for refactored `DefinitionFinder` — cross-file definition found, open-doc symbol found, unknown symbol returns empty
+
+## Decisions
+
+| # | Date | Decision |
+|---|------|----------|
+| 1 | 2026-05-25 | Removed `documentUri` field from `SymbolDefinition` — redundant with `location.uri` (LSP `Location` already carries the URI). All call sites updated to use `symbol.location.uri`. |
+| 2 | 2026-05-25 | Removed `createSymbolDefinition` factory helper — no-value wrapper with no defaults or validation; symbol objects are constructed inline in `buildSymbolIndex`. |
+| 3 | 2026-05-25 | Fixed `getInnermostScope` scope attribution bug — when the innermost scope starts at the same line as the symbol being declared, the symbol belongs to the *parent* scope, not to the scope it creates. Fixed by returning `innermost.parentScope` when `innermost.startLine === lineNumber && innermost.parentScope !== null`. |
+| 4 | 2026-05-25 | `indexWorkspace` open question — should it accept directories and enumerate files internally, or accept an already-enumerated file path list? Deferred to `WorkspaceIndex` implementation session. |
