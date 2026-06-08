@@ -35,6 +35,7 @@ export const DATAFLEX_KEYWORDS: { [key: string]: KeywordConfig } = {
     //Conditionals and Loops
     if: { correctCasing: 'If', firstWordOnly: true },
     else: { correctCasing: 'Else', firstWordOnly: true },
+    elseif: { correctCasing: 'Else If', firstWordOnly: true },
     while: { correctCasing: 'While', firstWordOnly: true },
     loop: { correctCasing: 'Loop', firstWordOnly: true },
     for: { correctCasing: 'For', firstWordOnly: true },
@@ -49,7 +50,7 @@ export const CASED_KEYWORDS: string[] = Object.values(DATAFLEX_KEYWORDS).map(con
 
 //Function to get all regexes for keywords
 export function getAllKeywordRegexes(): [string, RegExp][] {
-    return Object.entries(DATAFLEX_KEYWORDS).map(([keyword, config]) => [
+    return Object.entries(DATAFLEX_KEYWORDS).map(([_keyword, config]) => [
         config.correctCasing,  // Return the correctCasing instead of the key
         createCaseSensitiveKeywordRegex(config)
     ]);

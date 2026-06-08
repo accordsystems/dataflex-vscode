@@ -1,15 +1,18 @@
 {
+	"extends": "../tsconfig.json",
 	"compilerOptions": {
-		"module": "commonjs",
+		"module": "nodenext",
 		"target": "ES2024",
 		"lib": [
 			"ES2024"
 		],
-		"moduleResolution": "node",
+		"moduleResolution": "nodenext",
 		"sourceMap": true,
 		"strict": true,
 		"outDir": "out",
-		"rootDir": "src"
+		"rootDir": "src",
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
 	},
 	"include": [
 		"src"

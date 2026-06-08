@@ -2,7 +2,7 @@ import {
   createConnection,
   TextDocuments,
   Diagnostic,
-  DiagnosticSeverity,
+  //DiagnosticSeverity,
   ProposedFeatures,
   InitializeParams,
   DidChangeConfigurationNotification,
@@ -12,9 +12,9 @@ import {
   TextDocumentSyncKind,
   InitializeResult,
   CodeAction,
-  CodeActionKind,
+  //CodeActionKind,
   CodeActionParams,
-  TextEdit,
+  //TextEdit,
   DefinitionParams
 } from 'vscode-languageserver/node';
 
@@ -24,21 +24,30 @@ import { DataFlexValidator } from './validation/DataFlexValidator';
 import { Location, Position, Range } from 'vscode-languageserver/node'; // Added for Definition Support
 import { SymbolIndexBuilder } from './Symbols/SymbolIndexBuilder';
 import { DefinitionFinder } from './Definitions/DefinitionFinder';
+import { DataflexWorkspaceResolver, ResolvedWorkspace } from './workspace/DataflexWorkspaceResolver';
 
-const symbolIndex = new SymbolIndexBuilder(); // updates symbol index, finds definitions
+//not yet implemented
+//const symbolIndex = new SymbolIndexBuilder(); // updates symbol index, finds definitions
 const definitionFinder = new DefinitionFinder(); // finds definitions
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 let connection = createConnection(ProposedFeatures.all);
 
+// Redirect console to LSP connection so all console.log/warn/error calls appear in the client output
+console.log = (msg: string) => connection.console.log(msg);
+console.warn = (msg: string) => connection.console.warn(msg);
+console.error = (msg: string) => connection.console.error(msg);
+
 // Create a simple text document manager.
 let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
 let hasConfigurationCapability: boolean = false;
 let hasWorkspaceFolderCapability: boolean = false;
-let hasDiagnosticRelatedInformationCapability: boolean = false;
-let hasAutoCorrectCapability: boolean = false;
+
+//not Implemented.
+//let hasDiagnosticRelatedInformationCapability: boolean = false;
+//let hasAutoCorrectCapability: boolean = false;
 
 connection.onInitialize((params: InitializeParams) => {
   let capabilities = params.capabilities;
@@ -51,11 +60,11 @@ connection.onInitialize((params: InitializeParams) => {
   hasWorkspaceFolderCapability = !!(
     capabilities.workspace && !!capabilities.workspace.workspaceFolders
   );
-  hasDiagnosticRelatedInformationCapability = !!(
-    capabilities.textDocument &&
-    capabilities.textDocument.publishDiagnostics &&
-    capabilities.textDocument.publishDiagnostics.relatedInformation
-  );
+  //hasDiagnosticRelatedInformationCapability = !!(
+  //  capabilities.textDocument &&
+  //  capabilities.textDocument.publishDiagnostics &&
+  //  capabilities.textDocument.publishDiagnostics.relatedInformation
+  //);
 
   const result: InitializeResult = {
     capabilities: {
@@ -79,17 +88,34 @@ connection.onInitialize((params: InitializeParams) => {
   return result;
 });
 
-connection.onInitialized(() => {
+let resolvedWorkspace: ResolvedWorkspace | null = null;
+
+connection.onInitialized(async () => {
   if (hasConfigurationCapability) {
     // Register for all configuration changes.
     connection.client.register(DidChangeConfigurationNotification.type, undefined);
+    await resolveWorkspace();
   }
   if (hasWorkspaceFolderCapability) {
     connection.workspace.onDidChangeWorkspaceFolders(_event => {
       connection.console.log('Workspace folder change event received.');
     });
   }
+  
+
 });
+
+async function resolveWorkspace(): Promise<void> {
+  const swsFile = await connection.workspace.getConfiguration('dataflex.workspace.swsFile')
+  if (!swsFile) return;
+  try {
+    resolvedWorkspace = DataflexWorkspaceResolver.resolve(swsFile);        
+    connection.console.log(`[WorkspaceResolver] Resolved: ${resolvedWorkspace.swsPath}`);
+  }
+  catch (e) {
+    connection.console.warn(`[WorkspaceResolver] ${(e as Error).message}`)
+  }
+}
 
 // The example settings
 interface ExampleSettings {
@@ -99,40 +125,34 @@ interface ExampleSettings {
 // The global settings, used when the `workspace/configuration` request is not supported by the client.
 // Please note that this is not the case when using this server with the client provided in this example
 // but could happen with other clients.
-const defaultSettings: ExampleSettings = { maxNumberOfProblems: 1000 };
-let globalSettings: ExampleSettings = defaultSettings;
+
+//Not yet implemented
+//const defaultSettings: ExampleSettings = { maxNumberOfProblems: 1000 };
+//let globalSettings: ExampleSettings = defaultSettings;
 
 // Cache the settings of all open documents
 let documentSettings: Map<string, Thenable<ExampleSettings>> = new Map();
 
-connection.onDidChangeConfiguration(change => {
-  if (hasConfigurationCapability) {
-    // Reset all cached document settings
-    documentSettings.clear();
-  } else {
-    globalSettings = <ExampleSettings>(
-      (change.settings.languageServerExample || defaultSettings)
-    );
-  }
-
-  // Revalidate all open text documents
-  documents.all().forEach(validateTextDocument);
+connection.onDidChangeConfiguration(async () => {
+    if (!hasConfigurationCapability) return;
+    await resolveWorkspace();
 });
 
-function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
-  if (!hasConfigurationCapability) {
-    return Promise.resolve(globalSettings);
-  }
-  let result = documentSettings.get(resource);
-  if (!result) {
-    result = connection.workspace.getConfiguration({
-      scopeUri: resource,
-      section: 'dataflex.languageServer'
-    });
-    documentSettings.set(resource, result);
-  }
-  return result;
-}
+// Not yet implemented, but this is where we would handle file changes that are relevant to the workspace, such as .sws or config files, and trigger a workspace re-resolution and re-validation of all documents if needed
+// function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
+//   if (!hasConfigurationCapability) {
+//     return Promise.resolve(globalSettings);
+//   }
+//   let result = documentSettings.get(resource);
+//   if (!result) {
+//     result = connection.workspace.getConfiguration({
+//       scopeUri: resource,
+//       section: 'dataflex.languageServer'
+//     });
+//     documentSettings.set(resource, result);
+//   }
+//   return result;
+// }
 
 // Only keep settings for open documents
 documents.onDidClose(e => {
@@ -227,7 +247,10 @@ connection.onDefinition(
 // Helper function to get the word range at a given position
 // Helper function to get word at position
 function getWordRangeAtPosition(document: TextDocument, position: Position): Range {
-  const line = document.getText().split(/\r?\n/)[position.line];
+  const line = document.getText().split(/\r?\n/)[position.line];  
+  //guard
+  if (!line) return { start: position, end: position };
+
   const wordRegex = /\b\w+\b/g;
   let match: RegExpExecArray | null;
 

@@ -24,7 +24,9 @@
     "compile": "tsc -b",
     "watch": "tsc -b -w",
     "postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
-    "package": "vsce package"
+    "package": "vsce package",
+    "test": "vscode-test",
+    "test:unit": "cross-env TS_NODE_PROJECT=server/tsconfig.json mocha --require ts-node/register \"server/src/**/*.test.ts\""
   },
   "contributes": {
     "configuration": {
@@ -49,6 +51,13 @@
           },
           "default": [],
           "description": "Additional file extensions to be treated as Dataflex source files."
+
+        },
+        "dataflex.workspace.swsFile": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to the DataFlex .sws workspace file. Used to resolve source and library paths for Go to Definition, completion, and other language features."
+
         }
       }
     },
@@ -110,7 +119,14 @@
     ]
   },
   "devDependencies": {
+    "@types/mocha": "^10.0.10",
     "@types/node": "^22.18.0",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
+    "cross-env": "^10.1.0",
+    "mocha": "^11.7.5",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.2"
   }
 }
