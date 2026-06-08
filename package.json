@@ -1,6 +1,6 @@
 {
   "name": "dataflex-vscode",
-  "version": "1.0.6",
+  "version": "1.0.8",
   "description": "Dataflex Language Server and Client for VsCode",
   "homepage": "https://github.com/accordsystems/dataflex-vscode#readme",
   "bugs": {
@@ -20,6 +20,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
+    "precompile": "npm version patch --no-git-tag-version",
     "compile": "tsc -b",
     "watch": "tsc -b -w",
     "postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
@@ -40,6 +41,14 @@
           "type": "string",
           "default": "D:\\source\\dataflex\\Import2000-DF32\\Compile\\x64\\DFComp64-cI20.ps1",
           "description": "Path to the Dataflex Console Mode Compile Script"
+        },
+        "dataflex.additionalFileExtensions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Additional file extensions to be treated as Dataflex source files."
         }
       }
     },

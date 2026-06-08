@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DataFlexDefinitionProvider = void 0;
 const vscode = require("vscode");
 const constants_1 = require("../constants/constants");
+const fileAssociations_1 = require("../settings/fileAssociations");
 class DataFlexDefinitionProvider {
     async provideDefinition(document, position, token) {
         const wordRange = document.getWordRangeAtPosition(position);
@@ -16,7 +17,8 @@ class DataFlexDefinitionProvider {
         return null;
     }
     async findDefinition(word, document, position) {
-        const workspaceFiles = await vscode.workspace.findFiles(`**/*{${constants_1.DATAFLEX_FILE_EXTENSIONS.join(',')}}`);
+        const allExtensions = [...constants_1.DATAFLEX_FILE_EXTENSIONS, ...(0, fileAssociations_1.getAdditionalExtensions)()];
+        const workspaceFiles = await vscode.workspace.findFiles(`**/*{${allExtensions.join(',')}}`);
         const exactMatchRegex = new RegExp(`\\b(${constants_1.DATAFLEX_KEYWORDS.CONTROL.join('|')}\\s+${word}\\b`);
         for (const file of workspaceFiles) {
             const fileContent = await vscode.workspace.openTextDocument(file);

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { DATAFLEX_KEYWORDS, DATAFLEX_FILE_EXTENSIONS } from '../constants/constants';
+import { getAdditionalExtensions } from '../settings/fileAssociations';
 
 export class DataFlexDefinitionProvider implements vscode.DefinitionProvider {
     async provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<vscode.Location | null> {
@@ -18,7 +19,8 @@ export class DataFlexDefinitionProvider implements vscode.DefinitionProvider {
     
 
     async findDefinition(word: string, document: vscode.TextDocument, position: vscode.Position): Promise<vscode.Location | null> {
-        const workspaceFiles = await vscode.workspace.findFiles(`**/*{${DATAFLEX_FILE_EXTENSIONS.join(',')}}`);
+        const allExtensions = [...DATAFLEX_FILE_EXTENSIONS, ...getAdditionalExtensions()];
+        const workspaceFiles = await vscode.workspace.findFiles(`**/*{${allExtensions.join(',')}}`);
         const exactMatchRegex = new RegExp(`\\b(${DATAFLEX_KEYWORDS.CONTROL.join('|')}\\s+${word}\\b`);
 
         for (const file of workspaceFiles) {

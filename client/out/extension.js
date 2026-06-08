@@ -9,6 +9,7 @@ const dataflexDocumentSymbolProvider_1 = require("./outline/dataflexDocumentSymb
 const dataflexDefinitionProvider_1 = require("./outline/dataflexDefinitionProvider");
 const checkSrcEncoding_1 = require("./utils/checkSrcEncoding");
 ;
+const fileAssociations_1 = require("./settings/fileAssociations");
 let client;
 function activate(context) {
     console.log('Dataflex Extension activated');
@@ -22,6 +23,9 @@ function activate(context) {
     const config = vscode.workspace.getConfiguration();
     // Check if the encoding for `.src` files is already set
     (0, checkSrcEncoding_1.checkSrcEncoding)(config);
+    //Apply user-configured custom file extensions and watch for changes
+    void (0, fileAssociations_1.applyFileAssociations)();
+    (0, fileAssociations_1.registerFileAssociationWatcher)(context);
     //commands
     (0, compileConsoleMode_1.activate)(context);
     client = (0, dataflexLanguageClient_1.activate)(context);

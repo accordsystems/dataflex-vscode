@@ -5,6 +5,7 @@ import { activate as activateCommandCompileConsoleMode } from './commands/compil
 import { DataFlexDocumentSymbolProvider } from './outline/dataflexDocumentSymbolProvider';
 import { DataFlexDefinitionProvider } from './outline/dataflexDefinitionProvider';
 import { checkSrcEncoding } from './utils/checkSrcEncoding'; ;
+import { applyFileAssociations, registerFileAssociationWatcher } from './settings/fileAssociations';
 import { LanguageClient } from 'vscode-languageclient/node';
 
 let client: LanguageClient;
@@ -23,6 +24,9 @@ export function activate(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration();
     // Check if the encoding for `.src` files is already set
     checkSrcEncoding(config);
+    //Apply user-configured custom file extensions and watch for changes
+    void applyFileAssociations();
+    registerFileAssociationWatcher(context);
     //commands
     activateCommandCompileConsoleMode(context);    
     client = activateLanguageClient(context);
